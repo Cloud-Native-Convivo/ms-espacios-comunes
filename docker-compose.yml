@@ -1,0 +1,60 @@
+services:
+  oracle-espacios:
+    image: gvenzl/oracle-free:23.5-slim
+    container_name: oracle-espacios
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: oracle_password
+      APP_USER: admin
+      APP_USER_PASSWORD: oracle_password
+      ORACLE_PDB: espacios_db
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ms-espacios-comunes:
+    build: .
+    container_name: ms-espacios-comunes
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: oracle-espacios
+      DB_PORT: 1521
+      DB_NAME: FREEPDB1
+      DB_USERNAME: admin
+      DB_PASSWORD: oracle_password
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USUARIO: guest
+      RABBITMQ_CONTRASENA: guest
+      EUREKA_URL: ""
+      EUREKA_IP: 0.0.0.0
+      EUREKA_PORT: 8082
+      PUERTO: 8082
+      MODO_DEBUG: "true"
+    depends_on:
+      oracle-espacios:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  oracle_data:

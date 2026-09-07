@@ -1,0 +1,56 @@
+# Dependabot — actualizaciones automáticas de dependencias
+version: 2
+updates:
+  # Dependencias Python (pyproject.toml)
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - python
+    groups:
+      fastapi-stack:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "pydantic*"
+          - "httpx*"
+          - "tenacity*"
+      database:
+        patterns:
+          - "sqlalchemy*"
+          - "oracledb*"
+          - "alembic*"
+      messaging:
+        patterns:
+          - "aio-pika*"
+          - "py-eureka-client*"
+      testing:
+        patterns:
+          - "pytest*"
+          - "pytest-asyncio*"
+
+  # Imagen base de contenedor (Dockerfile)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - docker
+
+  # Flujos de trabajo de GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci

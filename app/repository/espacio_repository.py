@@ -22,6 +22,7 @@ class EspacioRepository:
 
     async def actualizar(self, espacio: Espacio) -> Espacio:
         await self._sesion.flush()
+        await self._sesion.refresh(espacio)
         return espacio
 
     async def contar_reservas_asociadas(self, espacio_id: int) -> int:

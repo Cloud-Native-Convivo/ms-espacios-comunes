@@ -156,6 +156,12 @@ async def test_eliminar_espacio_sin_rol_admin_retorna_403(cliente):
     assert "Permisos insuficientes" in respuesta.json()["detail"]
 
 
+async def test_eliminar_espacio_sin_cabecera_roles_retorna_403(cliente):
+    respuesta = await cliente.delete("/api/v1/espacios/1")
+    assert respuesta.status_code == 403
+    assert "Permisos insuficientes" in respuesta.json()["detail"]
+
+
 async def test_eliminar_espacio_no_encontrado_retorna_404(cliente, servicio_mock):
     servicio_mock.eliminar.side_effect = EspacioNoEncontradoException(999)
 

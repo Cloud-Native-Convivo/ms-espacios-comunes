@@ -390,7 +390,7 @@ git push -u origin release/1.2.0
 gh pr create --base main --title "chore(release): 1.2.0" --body "Release 1.2.0"
 # tras merge en main:
 git checkout main && git pull origin main
-git tag -a v1.2.0 -m "v1.2.0"
+git tag -a v1.2.0 -m "v1.2.0: Resumen conciso del release" -m "- :sparkles: feat: descripción del cambio principal" -m "Refs: PR #N"
 git push origin --tags
 # merge back a develop:
 gh pr create --base develop --head release/1.2.0 --title "chore: merge release/1.2.0 back to develop"
@@ -405,7 +405,7 @@ git checkout -b hotfix/descripcion-corta main
 git push -u origin hotfix/descripcion-corta
 gh pr create --base main --title "fix: descripcion corta" --body "Hotfix"
 git checkout main && git pull origin main
-git tag -a v1.2.1 -m "v1.2.1"
+git tag -a v1.2.1 -m "v1.2.1: Parche urgente de seguridad" -m "- :bug: fix: descripción de la corrección" -m "Refs: PR #N"
 git push origin --tags
 gh pr create --base develop --head hotfix/descripcion-corta --title "fix: merge hotfix back to develop"
 git checkout develop && git pull origin develop
@@ -424,6 +424,35 @@ git checkout develop && git pull origin develop
 **Branch protection / PR:** `main` y `develop` protegidas, requieren PR + review, checks de CI en verde obligatorios.
 
 **Advertencia del autor (Driessen 2020):** Git Flow fue concebido para software con versionado explícito. Este proyecto versiona con semver y Docker tags, por lo que adopta Git Flow full conscientemente.
+
+### 11.4 Convención de Tags Semánticos e Informativos
+
+Los tags en `main` marcan releases de producción y deben ser **anotados e informativos**. Nunca crear tags livianos (lightweight) ni mensajes tautológicos tipo `-m "v1.2.0"`.
+
+**Reglas de etiquetado:**
+1. **Tags anotados obligatorios (`git tag -a`)**: Preservan autor, fecha y mensaje estructurado.
+2. **Formato del identificador**: `v<MAJOR>.<MINOR>.<PATCH>` (ej. `v0.2.2`, `v1.0.0`).
+3. **Estructura del mensaje**:
+   - **Línea 1 (Título)**: `vX.Y.Z: Resumen conciso del release en español` (≤72 caracteres).
+   - **Línea 2**: Línea en blanco.
+   - **Cuerpo (Changelog sintético)**: Viñetas con los hitos destacados del release clasificados por Gitmoji / Conventional Commits (`feat`, `fix`, `ci`, `security`, `breaking`).
+   - **Referencias**: Enlaces a PRs o issues asociados.
+
+**Ejemplo de creación:**
+```bash
+git tag -a v0.2.2 -m "v0.2.2: Actualización de dependencias y CI de seguridad
+
+- :sparkles: feat: soporte para reservas con solapamiento temporal
+- :construction_worker: ci(deps): dependabot para pip, docker y actions
+- :shield: security: proteccion estricta de ramas main y develop
+- Refs: PR #9, PR #10"
+```
+
+**Lectura y auditoría:**
+```bash
+git show v0.2.2          # Muestra el mensaje completo y metadatos del tag
+git tag -n9              # Lista tags con hasta 9 líneas de su anotación
+```
 
 ## 12. Límites del agente
 

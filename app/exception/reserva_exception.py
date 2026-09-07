@@ -16,7 +16,8 @@ class ReservaSolapamientoException(ReservaException):
 
 
 class ReservaFechaInvalidaException(ReservaException):
-    """Se lanza cuando la fecha de fin es anterior a la de inicio."""
+    """Se lanza cuando las fechas son inválidas."""
 
-    def __init__(self):
-        super().__init__("La fecha de fin debe ser posterior a la de inicio")
+    def __init__(self, mensaje: str = "La fecha de fin debe ser posterior a la de inicio"):
+        super().__init__(mensaje)
+

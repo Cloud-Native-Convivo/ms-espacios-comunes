@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.model.modelos import Espacio
+from app.model.modelos import Espacio, Reserva
 
 
 class EspacioRepository:
@@ -22,4 +22,16 @@ class EspacioRepository:
 
     async def actualizar(self, espacio: Espacio) -> Espacio:
         await self._sesion.flush()
+        await self._sesion.refresh(espacio)
         return espacio
+
+    async def contar_reservas_asociadas(self, espacio_id: int) -> int:
+        resultado = await self._sesion.execute(
+            select(func.count(Reserva.id)).where(Reserva.espacio_id == espacio_id)
+        )
+        return resultado.scalar_one()
+
+    async def eliminar_fisico(self, espacio: Espacio) -> None:
+        await self._sesion.delete(espacio)
+        await self._sesion.flush()
+

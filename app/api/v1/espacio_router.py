@@ -76,3 +76,17 @@ async def actualizar_espacio(
         estado=datos.estado,
     )
 
+
+@router.delete(
+    "/{espacio_id}",
+    status_code=204,
+    dependencies=[Depends(requerir_roles(["admin"]))],
+)
+async def eliminar_espacio(
+    espacio_id: int,
+    servicio: EspacioService = Depends(obtener_servicio),
+):
+    await servicio.eliminar(espacio_id)
+    return None
+
+

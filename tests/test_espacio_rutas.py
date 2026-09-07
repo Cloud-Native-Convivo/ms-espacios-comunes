@@ -5,6 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.espacio_router import obtener_servicio
+from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.main import app
 from app.model.modelos import Espacio
 
@@ -133,4 +134,95 @@ async def test_actualizar_espacio_sin_rol_admin_retorna_403(cliente):
         json=datos,
     )
     assert respuesta.status_code == 403
+
+
+async def test_eliminar_espacio_exitoso_retorna_204(cliente, servicio_mock):
+    servicio_mock.eliminar.return_value = "eliminado"
+
+    respuesta = await cliente.delete(
+        "/api/v1/espacios/1",
+        headers={"X-Usuario-Roles": "admin"},
+    )
+    assert respuesta.status_code == 204
+    assert respuesta.content == b""
+
+
+async def test_eliminar_espacio_sin_rol_admin_retorna_403(cliente):
+    respuesta = await cliente.delete(
+        "/api/v1/espacios/1",
+        headers={"X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 403
+    assert "Permisos insuficientes" in respuesta.json()["detail"]
+
+
+async def test_eliminar_espacio_no_encontrado_retorna_404(cliente, servicio_mock):
+    servicio_mock.eliminar.side_effect = EspacioNoEncontradoException(999)
+
+    respuesta = await cliente.delete(
+        "/api/v1/espacios/999",
+        headers={"X-Usuario-Roles": "admin"},
+    )
+    assert respuesta.status_code == 404
+    assert "no encontrado" in respuesta.json()["detail"]
+
+
+async def test_servicio_eliminar_sin_reservas_elimina_fisico():
+    from app.service.espacio_service import EspacioService
+
+    repo_mock = AsyncMock()
+    espacio = Espacio(id=1, nombre="Quincho", capacidad=15, estado="activo")
+    repo_mock.obtener_por_id.return_value = espacio
+    repo_mock.contar_reservas_asociadas.return_value = 0
+
+    servicio = EspacioService(repo_mock)
+    resultado = await servicio.eliminar(1)
+
+    assert resultado == "eliminado"
+    repo_mock.eliminar_fisico.assert_awaited_once_with(espacio)
+
+
+async def test_servicio_eliminar_con_reservas_inactiva():
+    from app.service.espacio_service import EspacioService
+
+    repo_mock = AsyncMock()
+    espacio = Espacio(id=2, nombre="Piscina", capacidad=20, estado="activo")
+    repo_mock.obtener_por_id.return_value = espacio
+    repo_mock.contar_reservas_asociadas.return_value = 3
+
+    servicio = EspacioService(repo_mock)
+    resultado = await servicio.eliminar(2)
+
+    assert resultado == "inactivado"
+    assert espacio.estado == "inactivo"
+    repo_mock.actualizar.assert_awaited_once_with(espacio)
+    repo_mock.eliminar_fisico.assert_not_called()
+
+
+async def test_servicio_eliminar_no_encontrado_lanza_excepcion():
+    from app.service.espacio_service import EspacioService
+
+    repo_mock = AsyncMock()
+    repo_mock.obtener_por_id.return_value = None
+
+    servicio = EspacioService(repo_mock)
+    with pytest.raises(EspacioNoEncontradoException):
+        await servicio.eliminar(999)
+
+
+async def test_cors_preflight_options(cliente):
+    respuesta = await cliente.options(
+        "/api/v1/espacios/",
+        headers={
+            "Origin": "http://localhost:4200",
+            "Access-Control-Request-Method": "DELETE",
+            "Access-Control-Request-Headers": "authorization,x-usuario-roles",
+        },
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.headers["access-control-allow-origin"] == "http://localhost:4200"
+    assert "DELETE" in respuesta.headers["access-control-allow-methods"]
+
+
+
 

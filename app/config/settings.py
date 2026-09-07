@@ -61,6 +61,8 @@ cargar_configuracion_remota()
 
 
 class Settings(BaseSettings):
+    database_url: str | None = None
+
     # --- Base de datos Oracle ---
     db_host: str = "localhost"
     db_port: int = 1521
@@ -94,6 +96,8 @@ class Settings(BaseSettings):
 
     @property
     def url_base_datos(self) -> str:
+        if self.database_url:
+            return self.database_url
         return (
             f"oracle+oracledb://{self.db_username}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/?service_name={self.db_name}"

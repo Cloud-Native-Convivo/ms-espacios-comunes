@@ -72,9 +72,10 @@ async def lifespan(aplicacion: FastAPI):
 app = FastAPI(
     title="ms-espacios-comunes",
     description="Microservicio de espacios comunes y reservas — Convivo",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
+
 
 registrar_manejadores_excepciones(app)
 app.add_middleware(SecurityHeadersMiddleware)

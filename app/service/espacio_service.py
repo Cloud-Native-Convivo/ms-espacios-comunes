@@ -56,3 +56,17 @@ class EspacioService:
         if estado is not None:
             espacio.estado = estado
         return await self._repo.actualizar(espacio)
+
+    async def eliminar(self, espacio_id: int) -> str:
+        espacio = await self._repo.obtener_por_id(espacio_id)
+        if not espacio:
+            raise EspacioNoEncontradoException(espacio_id)
+        reservas_count = await self._repo.contar_reservas_asociadas(espacio_id)
+        if reservas_count > 0:
+            espacio.estado = "inactivo"
+            await self._repo.actualizar(espacio)
+            return "inactivado"
+        else:
+            await self._repo.eliminar_fisico(espacio)
+            return "eliminado"
+

@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import obtener_sesion
-from app.dto.request.espacio_request import (
+from app.dto.esquemas import (
     ActualizarEspacioRequest,
     CrearEspacioRequest,
+    EspacioResponse,
 )
-from app.dto.response.espacio_response import EspacioResponse
 from app.exception.espacio_exception import EspacioNoEncontradoException
+from app.middleware.auth_roles import requerir_roles
 from app.repository.espacio_repository import EspacioRepository
 from app.service.espacio_service import EspacioService
 
@@ -36,7 +37,12 @@ async def obtener_espacio(
     return espacio
 
 
-@router.post("/", response_model=EspacioResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=EspacioResponse,
+    status_code=201,
+    dependencies=[Depends(requerir_roles(["admin"]))],
+)
 async def crear_espacio(
     datos: CrearEspacioRequest,
     servicio: EspacioService = Depends(obtener_servicio),
@@ -44,12 +50,17 @@ async def crear_espacio(
     return await servicio.crear(
         nombre=datos.nombre,
         capacidad=datos.capacidad,
+        tarifa_hora=datos.tarifa_hora,
         descripcion=datos.descripcion,
         ubicacion=datos.ubicacion,
     )
 
 
-@router.put("/{espacio_id}", response_model=EspacioResponse)
+@router.put(
+    "/{espacio_id}",
+    response_model=EspacioResponse,
+    dependencies=[Depends(requerir_roles(["admin"]))],
+)
 async def actualizar_espacio(
     espacio_id: int,
     datos: ActualizarEspacioRequest,
@@ -59,7 +70,9 @@ async def actualizar_espacio(
         espacio_id=espacio_id,
         nombre=datos.nombre,
         capacidad=datos.capacidad,
+        tarifa_hora=datos.tarifa_hora,
         descripcion=datos.descripcion,
         ubicacion=datos.ubicacion,
         estado=datos.estado,
     )
+

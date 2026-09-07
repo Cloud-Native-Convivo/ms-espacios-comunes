@@ -17,12 +17,14 @@ class EspacioService:
         self,
         nombre: str,
         capacidad: int,
+        tarifa_hora: float = 0.0,
         descripcion: str | None = None,
         ubicacion: str | None = None,
     ) -> Espacio:
         espacio = Espacio(
             nombre=nombre,
             capacidad=capacidad,
+            tarifa_hora=tarifa_hora,
             descripcion=descripcion,
             ubicacion=ubicacion,
         )
@@ -33,6 +35,7 @@ class EspacioService:
         espacio_id: int,
         nombre: str | None = None,
         capacidad: int | None = None,
+        tarifa_hora: float | None = None,
         descripcion: str | None = None,
         ubicacion: str | None = None,
         estado: str | None = None,
@@ -44,6 +47,8 @@ class EspacioService:
             espacio.nombre = nombre
         if capacidad is not None:
             espacio.capacidad = capacidad
+        if tarifa_hora is not None:
+            espacio.tarifa_hora = tarifa_hora
         if descripcion is not None:
             espacio.descripcion = descripcion
         if ubicacion is not None:

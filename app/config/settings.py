@@ -64,9 +64,10 @@ class Settings(BaseSettings):
     # --- Base de datos Oracle ---
     db_host: str = "localhost"
     db_port: int = 1521
-    db_name: str = "espacios_db"
+    db_name: str = "freepdb1"
     db_username: str = "admin"
-    db_password: str = ""
+    db_password: str = "oracle_password"
+
 
     # --- RabbitMQ ---
     rabbitmq_host: str = "localhost"
@@ -82,14 +83,20 @@ class Settings(BaseSettings):
     # --- Servidor ---
     puerto: int = 8082
     modo_debug: bool = False
+    config_server_url: str = CONFIG_SERVER_URL
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
+
 
     @property
     def url_base_datos(self) -> str:
         return (
             f"oracle+oracledb://{self.db_username}:{self.db_password}"
-            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+            f"@{self.db_host}:{self.db_port}/?service_name={self.db_name}"
         )
 
 

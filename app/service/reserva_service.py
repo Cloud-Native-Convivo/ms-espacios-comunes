@@ -3,6 +3,7 @@ import json
 
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
+    ReservaEspacioNoDisponibleException,
     ReservaFechaInvalidaException,
     ReservaSolapamientoException,
 )
@@ -27,6 +28,11 @@ class ReservaService:
         fecha_inicio: datetime.datetime,
         fecha_fin: datetime.datetime,
     ) -> Reserva:
+        if not usuario_sub or not usuario_sub.strip():
+            raise ReservaFechaInvalidaException(
+                "El identificador de usuario no puede estar vacío"
+            )
+
         ahora = datetime.datetime.now()
         fecha_inicio_cmp = (
             fecha_inicio.replace(tzinfo=None)
@@ -52,12 +58,15 @@ class ReservaService:
                 "La duración máxima permitida de una reserva es de 24 horas"
             )
 
-
         tarifa_hora = 0.0
         if self._espacio_repo:
-            espacio = await self._espacio_repo.obtener_por_id(espacio_id)
+            espacio = await self._espacio_repo.obtener_por_id(
+                espacio_id, con_bloqueo=True
+            )
             if not espacio:
                 raise EspacioNoEncontradoException(espacio_id)
+            if (espacio.estado or "").strip().lower() != "activo":
+                raise ReservaEspacioNoDisponibleException(espacio_id, espacio.estado)
             tarifa_hora = float(espacio.tarifa_hora) if espacio.tarifa_hora else 0.0
 
         if await self._repo.existe_solapamiento(espacio_id, fecha_inicio, fecha_fin):
@@ -112,6 +121,10 @@ class ReservaService:
         return reserva_creada
 
     async def listar_por_usuario(self, usuario_sub: str) -> list[Reserva]:
+        if not usuario_sub or not usuario_sub.strip():
+            raise ReservaFechaInvalidaException(
+                "El identificador de usuario no puede estar vacío"
+            )
         return await self._repo.obtener_por_usuario(usuario_sub)
 
     async def listar_todas(self) -> list[Reserva]:

@@ -12,7 +12,13 @@ class EspacioRepository:
         resultado = await self._sesion.execute(select(Espacio))
         return list(resultado.scalars().all())
 
-    async def obtener_por_id(self, espacio_id: int) -> Espacio | None:
+    async def obtener_por_id(
+        self, espacio_id: int, con_bloqueo: bool = False
+    ) -> Espacio | None:
+        if con_bloqueo:
+            stmt = select(Espacio).where(Espacio.id == espacio_id).with_for_update()
+            resultado = await self._sesion.execute(stmt)
+            return resultado.scalar_one_or_none()
         return await self._sesion.get(Espacio, espacio_id)
 
     async def crear(self, espacio: Espacio) -> Espacio:

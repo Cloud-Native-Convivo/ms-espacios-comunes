@@ -1,5 +1,5 @@
 import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -228,6 +228,40 @@ async def test_cors_preflight_options(cliente):
     assert respuesta.status_code == 200
     assert respuesta.headers["access-control-allow-origin"] == "http://localhost:4200"
     assert "DELETE" in respuesta.headers["access-control-allow-methods"]
+
+
+async def test_espacio_repository_obtener_por_id_sin_bloqueo():
+    from app.repository.espacio_repository import EspacioRepository
+
+    sesion_mock = AsyncMock()
+    espacio = Espacio(id=1, nombre="Quincho", capacidad=10, estado="activo")
+    sesion_mock.get.return_value = espacio
+
+    repo = EspacioRepository(sesion_mock)
+    res = await repo.obtener_por_id(1, con_bloqueo=False)
+
+    assert res == espacio
+    sesion_mock.get.assert_awaited_once_with(Espacio, 1)
+    sesion_mock.execute.assert_not_called()
+
+
+async def test_espacio_repository_obtener_por_id_con_bloqueo():
+    from app.repository.espacio_repository import EspacioRepository
+
+    sesion_mock = AsyncMock()
+    espacio = Espacio(id=1, nombre="Quincho", capacidad=10, estado="activo")
+    resultado_mock = MagicMock()
+    resultado_mock.scalar_one_or_none.return_value = espacio
+    sesion_mock.execute.return_value = resultado_mock
+
+    repo = EspacioRepository(sesion_mock)
+    res = await repo.obtener_por_id(1, con_bloqueo=True)
+
+    assert res == espacio
+    sesion_mock.execute.assert_awaited_once()
+    consulta_ejecutada = sesion_mock.execute.call_args[0][0]
+    assert getattr(consulta_ejecutada, "_for_update_arg", None) is not None
+    sesion_mock.get.assert_not_called()
 
 
 

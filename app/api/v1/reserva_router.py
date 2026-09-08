@@ -26,7 +26,7 @@ def obtener_servicio(sesion: AsyncSession = Depends(obtener_sesion)) -> ReservaS
 )
 async def crear_reserva(
     datos: CrearReservaRequest,
-    x_usuario_sub: str = Header(...),
+    x_usuario_sub: str = Header(..., min_length=1),
     servicio: ReservaService = Depends(obtener_servicio),
 ):
     return await servicio.crear(
@@ -39,7 +39,7 @@ async def crear_reserva(
 
 @router.get("/", response_model=list[ReservaResponse])
 async def listar_reservas(
-    x_usuario_sub: str = Header(...),
+    x_usuario_sub: str = Header(..., min_length=1),
     x_usuario_roles: str = Header(default=""),
     servicio: ReservaService = Depends(obtener_servicio),
 ):

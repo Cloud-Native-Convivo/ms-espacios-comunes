@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 import httpx
 from dotenv import load_dotenv
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ _MAPA_CLAVES = {
     "eureka.ip": "EUREKA_IP",
     "eureka.port": "EUREKA_PORT",
     "modo-debug": "MODO_DEBUG",
+    "cors.origins": "CORS_ORIGINS",
 }
 
 
@@ -86,6 +88,31 @@ class Settings(BaseSettings):
     puerto: int = 8082
     modo_debug: bool = False
     config_server_url: str = CONFIG_SERVER_URL
+
+    # --- CORS ---
+    cors_origins: list[str] | str = [
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
+    ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parsear_cors_origins(cls, v):
+        if isinstance(v, str):
+            v_stripped = v.strip()
+            if v_stripped.startswith("[") and v_stripped.endswith("]"):
+                try:
+                    import json
+
+                    parsed = json.loads(v_stripped)
+                    if isinstance(parsed, list):
+                        return [str(x).strip() for x in parsed if str(x).strip()]
+                except Exception:
+                    pass
+            return [origen.strip() for origen in v.split(",") if origen.strip()]
+        if isinstance(v, list):
+            return [str(origen).strip() for origen in v if str(origen).strip()]
+        return v
 
     model_config = {
         "env_file": ".env",

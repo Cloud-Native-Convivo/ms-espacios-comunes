@@ -73,7 +73,7 @@ async def lifespan(aplicacion: FastAPI):
 app = FastAPI(
     title="ms-espacios-comunes",
     description="Microservicio de espacios comunes y reservas — Convivo",
-    version="0.2.1",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -83,10 +83,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],

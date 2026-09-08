@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.reserva_router import obtener_servicio
 from app.exception.reserva_exception import (
+    ReservaEspacioNoDisponibleException,
     ReservaFechaInvalidaException,
     ReservaSolapamientoException,
 )
@@ -46,6 +47,68 @@ async def test_crear_reserva_sin_header(cliente):
         headers={"X-Usuario-Roles": "residente"},
     )
     assert respuesta.status_code == 422
+
+
+async def test_crear_reserva_x_usuario_sub_vacio_retorna_422(cliente):
+    now = datetime.datetime.now()
+    datos = {
+        "espacio_id": 1,
+        "fecha_inicio": (now + datetime.timedelta(hours=1)).isoformat(),
+        "fecha_fin": (now + datetime.timedelta(hours=3)).isoformat(),
+    }
+    respuesta = await cliente.post(
+        "/api/v1/reservas/",
+        json=datos,
+        headers={"X-Usuario-Sub": "", "X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_listar_reservas_sin_header_retorna_422(cliente):
+    respuesta = await cliente.get(
+        "/api/v1/reservas/",
+        headers={"X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_listar_reservas_x_usuario_sub_vacio_retorna_422(cliente):
+    respuesta = await cliente.get(
+        "/api/v1/reservas/",
+        headers={"X-Usuario-Sub": "", "X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_crear_reserva_x_usuario_sub_espacios_retorna_400(cliente, servicio_mock):
+    servicio_mock.crear.side_effect = ReservaFechaInvalidaException(
+        "El identificador de usuario no puede estar vacío"
+    )
+    now = datetime.datetime.now()
+    datos = {
+        "espacio_id": 1,
+        "fecha_inicio": (now + datetime.timedelta(hours=1)).isoformat(),
+        "fecha_fin": (now + datetime.timedelta(hours=3)).isoformat(),
+    }
+    respuesta = await cliente.post(
+        "/api/v1/reservas/",
+        json=datos,
+        headers={"X-Usuario-Sub": "   ", "X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 400
+    assert "identificador de usuario" in respuesta.json()["detail"]
+
+
+async def test_listar_reservas_x_usuario_sub_espacios_retorna_400(cliente, servicio_mock):
+    servicio_mock.listar_por_usuario.side_effect = ReservaFechaInvalidaException(
+        "El identificador de usuario no puede estar vacío"
+    )
+    respuesta = await cliente.get(
+        "/api/v1/reservas/",
+        headers={"X-Usuario-Sub": "   ", "X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 400
+    assert "identificador de usuario" in respuesta.json()["detail"]
 
 
 
@@ -128,6 +191,23 @@ async def test_crear_reserva_solapamiento_retorna_409(cliente, servicio_mock):
     )
     assert respuesta.status_code == 409
     assert "ya está reservado" in respuesta.json()["detail"]
+
+
+async def test_crear_reserva_espacio_inactivo_retorna_409(cliente, servicio_mock):
+    servicio_mock.crear.side_effect = ReservaEspacioNoDisponibleException(1, "inactivo")
+    now = datetime.datetime.now()
+    datos = {
+        "espacio_id": 1,
+        "fecha_inicio": now.isoformat(),
+        "fecha_fin": (now + datetime.timedelta(hours=2)).isoformat(),
+    }
+    respuesta = await cliente.post(
+        "/api/v1/reservas/",
+        json=datos,
+        headers={"X-Usuario-Sub": "user-123", "X-Usuario-Roles": "residente"},
+    )
+    assert respuesta.status_code == 409
+    assert "no está disponible" in respuesta.json()["detail"]
 
 
 async def test_listar_reservas_usuario(cliente, servicio_mock):

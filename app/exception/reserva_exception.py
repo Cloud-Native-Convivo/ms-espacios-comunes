@@ -21,3 +21,14 @@ class ReservaFechaInvalidaException(ReservaException):
     def __init__(self, mensaje: str = "La fecha de fin debe ser posterior a la de inicio"):
         super().__init__(mensaje)
 
+
+class ReservaEspacioNoDisponibleException(ReservaException):
+    """Se lanza cuando el espacio no está en estado activo."""
+
+    def __init__(self, espacio_id: int, estado: str):
+        self.espacio_id = espacio_id
+        self.estado = estado
+        super().__init__(
+            f"El espacio {espacio_id} no está disponible para reservas (estado: {estado})"
+        )
+

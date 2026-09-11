@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ms-espacios-comunes"
-version = "0.3.0"
+version = "0.3.1"
 
 description = "Microservicio de espacios comunes y reservas — Convivo"
 requires-python = ">=3.11"

@@ -4,6 +4,7 @@ updates:
   # Dependencias Python (pyproject.toml)
   - package-ecosystem: pip
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
@@ -36,6 +37,7 @@ updates:
   # Imagen base de contenedor (Dockerfile)
   - package-ecosystem: docker
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
@@ -47,6 +49,7 @@ updates:
   # Flujos de trabajo de GitHub Actions
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday

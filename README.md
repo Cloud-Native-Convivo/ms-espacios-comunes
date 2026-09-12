@@ -111,8 +111,12 @@ El microservicio delega la validación criptográfica de JWT al BFF y consume la
 
 ### 4. Topología de Mensajería (RabbitMQ)
 
-- **Exchange**: `convivo.eventos` (Direct / Topic).
-- **Evento emitido**: `reserva.creada`
+- **Exchange**: `espacios_events` (Topic, durable). Mismo nombre y misma
+  declaración (tipo/durabilidad) que usa `ms-gastos-comunes`
+  (`RabbitMqConfig.espaciosEventsExchange`) — si difieren, RabbitMQ
+  rechaza la segunda declaración con `PRECONDITION_FAILED`.
+- **Evento emitido**: `reserva_espacio_creada` (routing key = nombre del
+  evento, publicado vía patrón Outbox)
   - Carga útil JSON:
     ```json
     {
@@ -125,9 +129,24 @@ El microservicio delega la validación criptográfica de JWT al BFF y consume la
       "expira_en": "2026-10-15T01:15:00"
     }
     ```
-- **Cola de consumo de compensación**: `ms-espacios-comunes.compensacion`
-  - Routing key de escucha: `gasto.pago.fallido`
-  - Efecto: cancela la reserva asociada y libera el cupo de horario.
+- **Colas de consumo** (bindeadas al exchange `espacios_events`, routing
+  key igual al nombre de la cola):
+  - `gasto_fallido` — publicada por `ms-gastos-comunes` cuando falla la
+    creación del gasto común asociado. Efecto: cancela la reserva
+    asociada y libera el cupo de horario.
+  - `reserva_pagada` — reservada para la confirmación de pago; sin
+    productor implementado todavía (la confirmación de pago hoy solo
+    existe vía REST, `POST /api/v1/reservas/{id}/confirmar-pago`).
+
+> **Nota operativa**: el contenedor `rabbitmq` del `docker-compose.yml`
+> no tiene volumen persistente — su estado (incluida la declaración del
+> exchange) vive solo en la capa de escritura del contenedor. Si ya
+> corriste una versión anterior de este servicio contra ese mismo
+> contenedor, un `docker compose restart` no alcanza para que tome un
+> cambio de topología: hay que recrearlo (`docker compose down` +
+> `docker compose up --build -d`, o `docker compose rm -f -s rabbitmq`
+> puntual) para que RabbitMQ declare el exchange desde cero con el tipo
+> nuevo.
 
 ---
 

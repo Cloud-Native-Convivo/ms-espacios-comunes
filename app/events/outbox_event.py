@@ -21,7 +21,14 @@ async def relay_outbox():
         password=settings.rabbitmq_contrasena,
     )
     canal = await conexion.channel()
-    exchange = await canal.declare_exchange("espacios_events", aio_pika.ExchangeType.DIRECT)
+    # TOPIC + durable=True: debe coincidir exacto con la declaracion de
+    # ms-gastos-comunes (RabbitMqConfig.espaciosEventsExchange), que es
+    # quien tambien publica en este mismo exchange (evento gasto_fallido).
+    # Una declaracion distinta (tipo o durable) en cualquiera de los dos
+    # lados hace que RabbitMQ rechace la segunda con PRECONDITION_FAILED.
+    exchange = await canal.declare_exchange(
+        "espacios_events", aio_pika.ExchangeType.TOPIC, durable=True
+    )
 
     while True:
         async with fabrica_sesiones() as sesion:

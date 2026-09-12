@@ -99,8 +99,17 @@ async def consumidor_compensacion():
     canal = await conexion.channel()
     await canal.set_qos(prefetch_count=1)
 
+    # Mismo exchange que publica ms-gastos-comunes (RabbitMqConfig): sin
+    # bind explicito, RabbitMQ nunca entrega los mensajes ruteados a este
+    # exchange, aunque la cola exista y este declarada.
+    exchange = await canal.declare_exchange(
+        "espacios_events", aio_pika.ExchangeType.TOPIC, durable=True
+    )
+
     cola_compensacion = await canal.declare_queue(COLA_COMPENSACION, durable=True)
     cola_pago = await canal.declare_queue(COLA_PAGO, durable=True)
+    await cola_compensacion.bind(exchange, routing_key=COLA_COMPENSACION)
+    await cola_pago.bind(exchange, routing_key=COLA_PAGO)
 
     await cola_compensacion.consume(procesar_compensacion)
     await cola_pago.consume(procesar_pago)

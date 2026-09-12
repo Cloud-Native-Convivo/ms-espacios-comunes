@@ -25,6 +25,7 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -33,6 +34,7 @@ include = ["app*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--cov=app --cov-branch --cov-fail-under=60 --cov-report=term-missing"
 
 [tool.ruff]
 line-length = 88

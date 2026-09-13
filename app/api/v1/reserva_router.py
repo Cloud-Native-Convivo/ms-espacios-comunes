@@ -44,7 +44,7 @@ async def listar_reservas(
     servicio: ReservaService = Depends(obtener_servicio),
 ):
     roles = {r.strip().lower() for r in x_usuario_roles.split(",") if r.strip()}
-    if "admin" in roles or "conserje" in roles:
+    if "admin" in roles or "administrador" in roles or "conserje" in roles:
         return await servicio.listar_todas()
     return await servicio.listar_por_usuario(x_usuario_sub)
 

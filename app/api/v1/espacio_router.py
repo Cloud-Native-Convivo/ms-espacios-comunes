@@ -41,7 +41,7 @@ async def obtener_espacio(
     "/",
     response_model=EspacioResponse,
     status_code=201,
-    dependencies=[Depends(requerir_roles(["admin"]))],
+    dependencies=[Depends(requerir_roles(["admin", "administrador", "conserje"]))],
 )
 async def crear_espacio(
     datos: CrearEspacioRequest,
@@ -59,7 +59,7 @@ async def crear_espacio(
 @router.put(
     "/{espacio_id}",
     response_model=EspacioResponse,
-    dependencies=[Depends(requerir_roles(["admin"]))],
+    dependencies=[Depends(requerir_roles(["admin", "administrador", "conserje"]))],
 )
 async def actualizar_espacio(
     espacio_id: int,
@@ -80,7 +80,7 @@ async def actualizar_espacio(
 @router.delete(
     "/{espacio_id}",
     status_code=204,
-    dependencies=[Depends(requerir_roles(["admin"]))],
+    dependencies=[Depends(requerir_roles(["admin", "administrador", "conserje"]))],
 )
 async def eliminar_espacio(
     espacio_id: int,

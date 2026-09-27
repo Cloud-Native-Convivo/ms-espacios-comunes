@@ -23,6 +23,7 @@ _MAPA_CLAVES = {
     "rabbitmq.host": "RABBITMQ_HOST",
     "rabbitmq.port": "RABBITMQ_PORT",
     "rabbitmq.usuario": "RABBITMQ_USUARIO",
+    "rabbitmq.contrasena": "RABBITMQ_CONTRASENA",
     "eureka.url": "EUREKA_URL",
     "eureka.ip": "EUREKA_IP",
     "eureka.port": "EUREKA_PORT",
@@ -80,7 +81,7 @@ class Settings(BaseSettings):
     rabbitmq_contrasena: str = "guest"
 
     # --- Eureka ---
-    eureka_url: str = "http://localhost:8761/eureka/"
+    eureka_url: str = "http://admin:admin123@localhost:8761/eureka/"
     eureka_ip: str = "127.0.0.1"
     eureka_port: int = 8082
 

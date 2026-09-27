@@ -6,9 +6,9 @@ services:
     ports:
       - "1521:1521"
     environment:
-      ORACLE_PASSWORD: oracle_password
-      APP_USER: admin
-      APP_USER_PASSWORD: oracle_password
+      ORACLE_PASSWORD: ${DB_PASSWORD:-oracle_password}
+      APP_USER: ${DB_USERNAME:-admin}
+      APP_USER_PASSWORD: ${DB_PASSWORD:-oracle_password}
       ORACLE_PDB: freepdb1
     volumes:
       - oracle_data:/opt/oracle/oradata
@@ -18,21 +18,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
-    networks:
-      - convivo-network
-
-  rabbitmq:
-    image: rabbitmq:4-management
-    container_name: rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     networks:
       - convivo-network
 
@@ -54,13 +39,13 @@ services:
       DB_HOST: oracle-espacios
       DB_PORT: 1521
       DB_NAME: freepdb1
-      DB_USERNAME: admin
-      DB_PASSWORD: oracle_password
+      DB_USERNAME: ${DB_USERNAME:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-oracle_password}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USUARIO: guest
-      RABBITMQ_CONTRASENA: guest
-      EUREKA_URL: http://discovery-server:8761/eureka/
+      RABBITMQ_USUARIO: ${RABBITMQ_USUARIO:-guest}
+      RABBITMQ_CONTRASENA: ${RABBITMQ_CONTRASENA:-guest}
+      EUREKA_URL: http://admin:${EUREKA_PASSWORD:-admin123}@discovery-server:8761/eureka/
       EUREKA_IP: ms-espacios-comunes
       EUREKA_PORT: 8082
       PUERTO: 8082
@@ -68,8 +53,6 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
     depends_on:
       oracle-espacios:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
 
 volumes:

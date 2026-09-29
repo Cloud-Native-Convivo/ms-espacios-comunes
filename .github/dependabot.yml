@@ -3,6 +3,12 @@ version: 2
 updates:
   # Dependencias Python (pyproject.toml)
   - package-ecosystem: pip
+
+    # Espera 7 dias antes de proponer una version nueva (mitiga paquetes comprometidos recien publicados)
+
+    cooldown:
+
+      default-days: 7
     directory: /
     target-branch: develop
     schedule:
@@ -36,6 +42,12 @@ updates:
 
   # Imagen base de contenedor (Dockerfile)
   - package-ecosystem: docker
+
+    # Espera 7 dias antes de proponer una version nueva (mitiga paquetes comprometidos recien publicados)
+
+    cooldown:
+
+      default-days: 7
     directory: /
     target-branch: develop
     schedule:
@@ -48,6 +60,12 @@ updates:
 
   # Flujos de trabajo de GitHub Actions
   - package-ecosystem: github-actions
+
+    # Espera 7 dias antes de proponer una version nueva (mitiga paquetes comprometidos recien publicados)
+
+    cooldown:
+
+      default-days: 7
     directory: /
     target-branch: develop
     schedule:

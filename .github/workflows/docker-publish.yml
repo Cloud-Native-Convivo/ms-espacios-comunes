@@ -43,6 +43,8 @@ jobs:
       - name: Reporte Trivy (SARIF)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # trivy-action v0.36.0 trae Trivy 0.70.0 por defecto; Dependabot no actualiza este valor
+          version: v0.74.0
           image-ref: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
           format: sarif
           # Sin esto trivy-action ignora severity con SARIF
@@ -62,6 +64,8 @@ jobs:
       - name: Bloquear publicacion si hay CRITICAL
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # trivy-action v0.36.0 trae Trivy 0.70.0 por defecto; Dependabot no actualiza este valor
+          version: v0.74.0
           image-ref: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
           format: table
           severity: CRITICAL

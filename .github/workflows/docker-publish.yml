@@ -46,6 +46,8 @@ jobs:
         with:
           image-ref: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
           format: sarif
+          # Sin esto trivy-action ignora severity con SARIF y falla ante cualquier HIGH
+          limit-severities-for-sarif: true
           output: trivy.sarif
           severity: CRITICAL
           ignore-unfixed: true

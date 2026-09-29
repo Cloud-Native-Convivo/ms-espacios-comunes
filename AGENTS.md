@@ -33,7 +33,7 @@ Roles: residente (reserva), admin (gestiona espacios), conserje (consulta). La v
 
 ## 2. Stack técnico
 
-- Lenguaje: Python 3.11
+- Lenguaje: Python 3.12
 - Framework: FastAPI 0.115+ (con Uvicorn)
 - ORM: SQLAlchemy 2.0 (async) + oracledb (thin mode)
 - Base de datos: Oracle Database Free 23ai (`espacios_db`)

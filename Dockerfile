@@ -5,10 +5,12 @@ FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4d
 WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-COPY pyproject.toml ./
+COPY pyproject.toml requirements.txt ./
+# Dependencias fijadas por hash (requirements.txt, generado con pip-compile).
+# --no-build-isolation: setuptools sale del lock en vez de descargarse sin fijar.
 RUN mkdir app && touch app/__init__.py && \
-    pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir . && \
+    pip install --no-cache-dir --require-hashes -r requirements.txt && \
+    pip install --no-cache-dir --no-deps --no-build-isolation . && \
     rm -rf app
 
 # ============================================
@@ -16,7 +18,7 @@ RUN mkdir app && touch app/__init__.py && \
 # ============================================
 FROM deps AS build
 COPY app ./app
-RUN pip install --no-cache-dir --no-deps -e .
+RUN pip install --no-cache-dir --no-deps --no-build-isolation -e .
 
 # ============================================
 # Etapa 3: Imagen final liviana

@@ -36,6 +36,9 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "--cov=app --cov-branch --cov-fail-under=60 --cov-report=term-missing"
 
+[tool.coverage.run]
+relative_files = true
+
 [tool.ruff]
 line-length = 88
 target-version = "py314"

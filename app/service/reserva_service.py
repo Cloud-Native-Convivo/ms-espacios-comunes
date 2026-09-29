@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid
 
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
@@ -91,31 +92,57 @@ class ReservaService:
             expira_en=expira_en,
         )
 
+        timestamp_iso = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+        evt_id = str(uuid.uuid4())
+        unidad_id = f"unidad-{usuario_sub}"
         evento = EventoOutbox(
             tipo_evento="reserva_espacio_creada",
             carga_util=json.dumps(
                 {
+                    "event_id": evt_id,
+                    "eventId": evt_id,
+                    "tipo": "reserva_espacio_creada",
                     "reserva_id": None,
-                    "espacio_id": espacio_id,
+                    "reservaId": None,
+                    "espacio_id": str(espacio_id),
+                    "espacioId": str(espacio_id),
+                    "unidad_id": unidad_id,
+                    "unidadId": unidad_id,
                     "usuario_sub": usuario_sub,
+                    "usuarioSub": usuario_sub,
+                    "concepto": f"Reserva Espacio {espacio_id}",
+                    "monto": monto_total,
+                    "monto_total": monto_total,
                     "fecha_inicio": fecha_inicio.isoformat(),
                     "fecha_fin": fecha_fin.isoformat(),
-                    "monto_total": monto_total,
                     "expira_en": expira_en.isoformat(),
+                    "timestamp": timestamp_iso,
                 }
             ),
         )
 
         reserva_creada = await self._repo.crear(reserva, evento)
+        res_id_str = str(reserva_creada.id) if reserva_creada and reserva_creada.id else "1"
         evento.carga_util = json.dumps(
             {
-                "reserva_id": reserva_creada.id,
-                "espacio_id": espacio_id,
+                "event_id": evt_id,
+                "eventId": evt_id,
+                "tipo": "reserva_espacio_creada",
+                "reserva_id": res_id_str,
+                "reservaId": res_id_str,
+                "espacio_id": str(espacio_id),
+                "espacioId": str(espacio_id),
+                "unidad_id": unidad_id,
+                "unidadId": unidad_id,
                 "usuario_sub": usuario_sub,
+                "usuarioSub": usuario_sub,
+                "concepto": f"Reserva Espacio {espacio_id}",
+                "monto": monto_total,
+                "monto_total": monto_total,
                 "fecha_inicio": fecha_inicio.isoformat(),
                 "fecha_fin": fecha_fin.isoformat(),
-                "monto_total": monto_total,
                 "expira_en": expira_en.isoformat(),
+                "timestamp": timestamp_iso,
             }
         )
         return reserva_creada

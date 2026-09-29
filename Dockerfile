@@ -1,7 +1,7 @@
 # ============================================
 # Etapa 1: Descargar dependencias (cache)
 # ============================================
-FROM python:3.14-slim AS deps
+FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS deps
 WORKDIR /app
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -21,9 +21,9 @@ RUN pip install --no-cache-dir --no-deps -e .
 # ============================================
 # Etapa 3: Imagen final liviana
 # ============================================
-FROM python:3.14-slim
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl libaio1t64 && \
+FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends curl libaio1 || apt-get install -y --no-install-recommends curl libaio1t64) && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /opt/venv /opt/venv
@@ -40,4 +40,8 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 EXPOSE 8082
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8082/api/v1/health || exit 1
+
 ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8082"]

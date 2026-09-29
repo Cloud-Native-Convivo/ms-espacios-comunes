@@ -7,11 +7,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml requirements.txt ./
 # Dependencias fijadas por hash (requirements.txt, generado con pip-compile).
-# --no-build-isolation: setuptools sale del lock en vez de descargarse sin fijar.
-RUN mkdir app && touch app/__init__.py && \
-    pip install --no-cache-dir --require-hashes -r requirements.txt && \
-    pip install --no-cache-dir --no-deps --no-build-isolation . && \
-    rm -rf app
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
 # ============================================
 # Etapa 2: Compilar la aplicación

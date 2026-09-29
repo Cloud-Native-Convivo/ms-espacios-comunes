@@ -40,18 +40,17 @@ jobs:
           load: true
           tags: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
 
-      # Falla con CRITICAL antes de publicar; el SARIF se sube igual para verlo en Code scanning
-      - name: Escanear imagen con Trivy
+      - name: Reporte Trivy (SARIF)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
           format: sarif
-          # Sin esto trivy-action ignora severity con SARIF y falla ante cualquier HIGH
+          # Sin esto trivy-action ignora severity con SARIF
           limit-severities-for-sarif: true
           output: trivy.sarif
-          severity: CRITICAL
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "1"
+          exit-code: "0"
 
       - name: Subir SARIF a Code scanning
         if: always()
@@ -59,6 +58,15 @@ jobs:
         with:
           sarif_file: trivy.sarif
           category: trivy-imagen
+
+      - name: Bloquear publicacion si hay CRITICAL
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{secrets.DOCKER_USERNAME}}/ms-espacios-comunes:latest
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
       - name: Push de la imagen
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0

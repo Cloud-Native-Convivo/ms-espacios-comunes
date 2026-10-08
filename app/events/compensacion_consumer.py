@@ -7,8 +7,7 @@ from tenacity import before_sleep_log, retry, wait_fixed
 from app.config.database import fabrica_sesiones
 from app.config.settings import settings
 from app.dto.esquemas import EventoPagoConfirmadoRequest, GastoFallidoRequest
-from app.repository.reserva_repository import ReservaRepository
-from app.service.reserva_service import ReservaService
+from app.service import reserva_service
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ async def procesar_compensacion(mensaje: aio_pika.IncomingMessage):
     try:
         datos = GastoFallidoRequest.model_validate_json(mensaje.body)
     except Exception as error_json:
-        logger.error(
+        logger.exception(
             "Mensaje corrupto en cola compensación (descartado): %s",
             error_json,
         )
@@ -30,8 +29,8 @@ async def procesar_compensacion(mensaje: aio_pika.IncomingMessage):
     try:
         async with mensaje.process(requeue=True):
             async with fabrica_sesiones() as sesion:
-                servicio = ReservaService(ReservaRepository(sesion))
-                reserva = await servicio.compensar_por_gasto_fallido(
+                reserva = await reserva_service.compensar_por_gasto_fallido(
+                    sesion,
                     usuario_sub=datos.usuario_sub,
                     espacio_id=datos.espacio_id,
                     fecha_inicio=datos.fecha_inicio,
@@ -58,7 +57,7 @@ async def procesar_pago(mensaje: aio_pika.IncomingMessage):
     try:
         datos = EventoPagoConfirmadoRequest.model_validate_json(mensaje.body)
     except Exception as error_json:
-        logger.error(
+        logger.exception(
             "Mensaje corrupto en cola confirmación de pago (descartado): %s",
             error_json,
         )
@@ -68,8 +67,7 @@ async def procesar_pago(mensaje: aio_pika.IncomingMessage):
     try:
         async with mensaje.process(requeue=True):
             async with fabrica_sesiones() as sesion:
-                servicio = ReservaService(ReservaRepository(sesion))
-                reserva = await servicio.confirmar_pago(datos.reserva_id)
+                reserva = await reserva_service.confirmar_pago(sesion, datos.reserva_id)
                 if reserva:
                     await sesion.commit()
                     logger.info(
@@ -123,4 +121,3 @@ async def consumidor_compensacion():
         await asyncio.Future()
     finally:
         await conexion.close()
-

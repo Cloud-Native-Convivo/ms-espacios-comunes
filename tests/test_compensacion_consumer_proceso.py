@@ -1,0 +1,85 @@
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from app.events import compensacion_consumer as consumer
+
+
+def _fabrica_con(sesion):
+    contexto = MagicMock()
+    contexto.__aenter__ = AsyncMock(return_value=sesion)
+    contexto.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=contexto)
+
+
+def _mensaje(cuerpo: dict):
+    mensaje = MagicMock()
+    mensaje.body = json.dumps(cuerpo).encode()
+    proceso = MagicMock()
+    proceso.__aenter__ = AsyncMock(return_value=None)
+    proceso.__aexit__ = AsyncMock(return_value=False)
+    mensaje.process = MagicMock(return_value=proceso)
+    return mensaje
+
+
+@pytest.mark.parametrize(
+    ("procesar", "cuerpo", "funcion_servicio"),
+    [
+        (consumer.procesar_compensacion, {"reserva_id": 3}, "compensar_por_gasto_fallido"),
+        (consumer.procesar_pago, {"reserva_id": 3}, "confirmar_pago"),
+    ],
+)
+@pytest.mark.parametrize("encontrada", [True, False])
+async def test_procesa_mensaje_valido(procesar, cuerpo, funcion_servicio, encontrada):
+    sesion = AsyncMock()
+    reserva = MagicMock(id=3) if encontrada else None
+    with (
+        patch.object(consumer, "fabrica_sesiones", _fabrica_con(sesion)),
+        patch.object(consumer.reserva_service, funcion_servicio, AsyncMock(return_value=reserva)) as servicio,
+    ):
+        await procesar(_mensaje(cuerpo))
+
+    servicio.assert_awaited_once()
+    assert sesion.commit.await_count == (1 if encontrada else 0)
+
+
+@pytest.mark.parametrize(
+    ("procesar", "funcion_servicio"),
+    [
+        (consumer.procesar_compensacion, "compensar_por_gasto_fallido"),
+        (consumer.procesar_pago, "confirmar_pago"),
+    ],
+)
+async def test_error_operacional_no_se_propaga(procesar, funcion_servicio):
+    sesion = AsyncMock()
+    with (
+        patch.object(consumer, "fabrica_sesiones", _fabrica_con(sesion)),
+        patch.object(consumer.reserva_service, funcion_servicio, AsyncMock(side_effect=RuntimeError("db"))),
+    ):
+        await procesar(_mensaje({"reserva_id": 1}))
+    sesion.commit.assert_not_awaited()
+
+
+async def test_consumidor_declara_colas_con_bind_y_cierra_al_cancelar():
+    exchange = MagicMock()
+    colas = {nombre: AsyncMock() for nombre in (consumer.COLA_COMPENSACION, consumer.COLA_PAGO)}
+    canal = AsyncMock()
+    canal.declare_exchange = AsyncMock(return_value=exchange)
+    canal.declare_queue = AsyncMock(side_effect=lambda nombre, durable: colas[nombre])
+    conexion = AsyncMock()
+    conexion.channel = AsyncMock(return_value=canal)
+
+    with patch.object(consumer.aio_pika, "connect_robust", AsyncMock(return_value=conexion)):
+        tarea = asyncio.create_task(consumer.consumidor_compensacion.__wrapped__())
+        while not colas[consumer.COLA_PAGO].consume.await_count:
+            await asyncio.sleep(0)
+        tarea.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tarea
+
+    canal.set_qos.assert_awaited_once_with(prefetch_count=1)
+    colas[consumer.COLA_COMPENSACION].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_COMPENSACION)
+    colas[consumer.COLA_PAGO].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_PAGO)
+    conexion.close.assert_awaited_once()

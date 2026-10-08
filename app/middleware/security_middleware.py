@@ -9,8 +9,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         respuesta = await call_next(request)
         respuesta.headers["X-Content-Type-Options"] = "nosniff"
         respuesta.headers["X-Frame-Options"] = "DENY"
-        respuesta.headers["X-XSS-Protection"] = "1; mode=block"
-        respuesta.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        respuesta.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         respuesta.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         es_documentacion = (
             request.url.path in ("/docs", "/redoc", "/openapi.json")

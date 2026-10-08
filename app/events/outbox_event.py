@@ -6,7 +6,7 @@ from tenacity import before_sleep_log, retry, wait_fixed
 
 from app.config.database import fabrica_sesiones
 from app.config.settings import settings
-from app.repository.reserva_repository import ReservaRepository
+from app.repository import reserva_repository
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +32,13 @@ async def relay_outbox():
 
     while True:
         async with fabrica_sesiones() as sesion:
-            repo = ReservaRepository(sesion)
-            eventos = await repo.obtener_pendientes_outbox()
+            eventos = await reserva_repository.obtener_pendientes_outbox(sesion)
             for evento in eventos:
                 mensaje = aio_pika.Message(
                     body=evento.carga_util.encode(),
                     content_type="application/json",
                 )
                 await exchange.publish(mensaje, routing_key=evento.tipo_evento)
-                await repo.marcar_como_procesado(evento)
+                await reserva_repository.marcar_como_procesado(sesion, evento)
             await sesion.commit()
         await asyncio.sleep(5)

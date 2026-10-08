@@ -164,7 +164,7 @@ Niveles: lite / full (defecto) / ultra.
 
 ## 7. Pruebas
 
-Cobertura mínima: 60% de ramas (del EDT) en lógica de servicios y validaciones de reserva. Cubrir camino feliz, camino de error, casos límite.
+Cobertura mínima: 80% de ramas (del EDT) en lógica de servicios y validaciones de reserva. Cubrir camino feliz, camino de error, casos límite.
 
 **Qué cobertura se mide** — el número solo significa algo si se dice de qué tipo es:
 

@@ -70,18 +70,18 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 1521
     db_name: str = "freepdb1"
-    db_username: str = "admin"
-    db_password: str = "oracle_password"
+    db_username: str
+    db_password: str
 
 
     # --- RabbitMQ ---
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
-    rabbitmq_usuario: str = "guest"
-    rabbitmq_contrasena: str = "guest"
+    rabbitmq_usuario: str
+    rabbitmq_contrasena: str
 
     # --- Eureka ---
-    eureka_url: str = "http://admin:admin123@localhost:8761/eureka/"
+    eureka_url: str | None = None
     eureka_ip: str = "127.0.0.1"
     eureka_port: int = 8082
 

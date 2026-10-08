@@ -9,73 +9,47 @@ from app.dto.esquemas import (
 )
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.middleware.auth_roles import requerir_roles
-from app.repository.espacio_repository import EspacioRepository
-from app.service.espacio_service import EspacioService
+from app.service import espacio_service
 
 router = APIRouter(prefix="/espacios", tags=["espacios"])
 
-
-def obtener_servicio(sesion: AsyncSession = Depends(obtener_sesion)) -> EspacioService:
-    return EspacioService(EspacioRepository(sesion))
-
-
-@router.get("/", response_model=list[EspacioResponse])
+@router.get("/")
 async def listar_espacios(
-    servicio: EspacioService = Depends(obtener_servicio),
-):
-    return await servicio.listar_todos()
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> list[EspacioResponse]:
+    return await espacio_service.listar_todos(sesion)
 
-
-@router.get("/{espacio_id}", response_model=EspacioResponse)
+@router.get("/{espacio_id}")
 async def obtener_espacio(
     espacio_id: int,
-    servicio: EspacioService = Depends(obtener_servicio),
-):
-    espacio = await servicio.obtener_por_id(espacio_id)
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> EspacioResponse:
+    espacio = await espacio_service.obtener_por_id(sesion, espacio_id)
     if not espacio:
         raise EspacioNoEncontradoException(espacio_id)
     return espacio
 
-
 @router.post(
     "/",
-    response_model=EspacioResponse,
     status_code=201,
     dependencies=[Depends(requerir_roles(["admin", "administrador", "conserje"]))],
 )
 async def crear_espacio(
     datos: CrearEspacioRequest,
-    servicio: EspacioService = Depends(obtener_servicio),
-):
-    return await servicio.crear(
-        nombre=datos.nombre,
-        capacidad=datos.capacidad,
-        tarifa_hora=datos.tarifa_hora,
-        descripcion=datos.descripcion,
-        ubicacion=datos.ubicacion,
-    )
-
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> EspacioResponse:
+    return await espacio_service.crear(sesion, datos)
 
 @router.put(
     "/{espacio_id}",
-    response_model=EspacioResponse,
     dependencies=[Depends(requerir_roles(["admin", "administrador", "conserje"]))],
 )
 async def actualizar_espacio(
     espacio_id: int,
     datos: ActualizarEspacioRequest,
-    servicio: EspacioService = Depends(obtener_servicio),
-):
-    return await servicio.actualizar(
-        espacio_id=espacio_id,
-        nombre=datos.nombre,
-        capacidad=datos.capacidad,
-        tarifa_hora=datos.tarifa_hora,
-        descripcion=datos.descripcion,
-        ubicacion=datos.ubicacion,
-        estado=datos.estado,
-    )
-
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> EspacioResponse:
+    return await espacio_service.actualizar(sesion, espacio_id, datos)
 
 @router.delete(
     "/{espacio_id}",
@@ -84,9 +58,7 @@ async def actualizar_espacio(
 )
 async def eliminar_espacio(
     espacio_id: int,
-    servicio: EspacioService = Depends(obtener_servicio),
-):
-    await servicio.eliminar(espacio_id)
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> None:
+    await espacio_service.eliminar(sesion, espacio_id)
     return None
-
-

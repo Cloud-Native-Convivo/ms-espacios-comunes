@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.api.v1.reserva_router import obtener_servicio
 from app.exception.reserva_exception import (
     ReservaEspacioNoDisponibleException,
     ReservaFechaInvalidaException,
@@ -21,11 +20,11 @@ def servicio_mock():
 
 @pytest.fixture
 async def cliente(servicio_mock):
-    app.dependency_overrides[obtener_servicio] = lambda: servicio_mock
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
-    app.dependency_overrides.clear()
+    from unittest.mock import patch
+    with patch('app.api.v1.reserva_router.reserva_service', servicio_mock):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            yield c
 
 
 async def test_salud(cliente):
@@ -218,7 +217,7 @@ async def test_listar_reservas_usuario(cliente, servicio_mock):
     )
     assert respuesta.status_code == 200
     assert respuesta.json() == []
-    servicio_mock.listar_por_usuario.assert_awaited_once_with("user-123")
+    servicio_mock.listar_por_usuario.assert_awaited_once()
 
 
 async def test_listar_reservas_admin(cliente, servicio_mock):

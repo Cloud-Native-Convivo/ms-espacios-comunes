@@ -4,66 +4,48 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import obtener_sesion
 from app.dto.esquemas import CrearReservaRequest, ReservaResponse
 from app.middleware.auth_roles import requerir_roles
-from app.repository.espacio_repository import EspacioRepository
-from app.repository.reserva_repository import ReservaRepository
-from app.service.reserva_service import ReservaService
+from app.service import reserva_service
 
 router = APIRouter(prefix="/reservas", tags=["reservas"])
 
-
-def obtener_servicio(sesion: AsyncSession = Depends(obtener_sesion)) -> ReservaService:
-    return ReservaService(
-        repo=ReservaRepository(sesion),
-        espacio_repo=EspacioRepository(sesion),
-    )
-
-
 @router.post(
     "/",
-    response_model=ReservaResponse,
     status_code=201,
     dependencies=[Depends(requerir_roles(["residente", "admin"]))],
 )
 async def crear_reserva(
     datos: CrearReservaRequest,
     x_usuario_sub: str = Header(..., min_length=1),
-    servicio: ReservaService = Depends(obtener_servicio),
-):
-    return await servicio.crear(
-        espacio_id=datos.espacio_id,
-        usuario_sub=x_usuario_sub,
-        fecha_inicio=datos.fecha_inicio,
-        fecha_fin=datos.fecha_fin,
-    )
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> ReservaResponse:
+    return await reserva_service.crear(sesion, datos, x_usuario_sub)
 
 
-@router.get("/", response_model=list[ReservaResponse])
+@router.get("/")
 async def listar_reservas(
     x_usuario_sub: str = Header(..., min_length=1),
     x_usuario_roles: str = Header(default=""),
-    servicio: ReservaService = Depends(obtener_servicio),
-):
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> list[ReservaResponse]:
     roles = {r.strip().lower() for r in x_usuario_roles.split(",") if r.strip()}
     if "admin" in roles or "administrador" in roles or "conserje" in roles:
-        return await servicio.listar_todas()
-    return await servicio.listar_por_usuario(x_usuario_sub)
+        return await reserva_service.listar_todas(sesion)
+    return await reserva_service.listar_por_usuario(sesion, x_usuario_sub)
 
 
 @router.post(
     "/{reserva_id}/confirmar-pago",
-    response_model=ReservaResponse,
+    responses={404: {"description": "Reserva no encontrada o no pendiente de pago"}},
     dependencies=[Depends(requerir_roles(["admin"]))],
 )
 async def confirmar_pago_reserva(
     reserva_id: int,
-    servicio: ReservaService = Depends(obtener_servicio),
-):
-
-    reserva = await servicio.confirmar_pago(reserva_id)
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> ReservaResponse:
+    reserva = await reserva_service.confirmar_pago(sesion, reserva_id)
     if not reserva:
         raise HTTPException(
             status_code=404,
             detail=f"Reserva {reserva_id} no encontrada o no pendiente de pago",
         )
     return reserva
-

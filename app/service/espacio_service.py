@@ -1,72 +1,58 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.model.modelos import Espacio
-from app.repository.espacio_repository import EspacioRepository
+from app.repository import espacio_repository
+from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 
 
-class EspacioService:
-    def __init__(self, repo: EspacioRepository):
-        self._repo = repo
+async def listar_todos(sesion: AsyncSession) -> list[Espacio]:
+    return await espacio_repository.obtener_todos(sesion)
 
-    async def listar_todos(self) -> list[Espacio]:
-        return await self._repo.obtener_todos()
+async def obtener_por_id(sesion: AsyncSession, espacio_id: int) -> Espacio | None:
+    return await espacio_repository.obtener_por_id(sesion, espacio_id)
 
-    async def obtener_por_id(self, espacio_id: int) -> Espacio | None:
-        return await self._repo.obtener_por_id(espacio_id)
+async def crear(sesion: AsyncSession, datos: CrearEspacioRequest) -> Espacio:
+    espacio = Espacio(
+        nombre=datos.nombre,
+        capacidad=datos.capacidad,
+        tarifa_hora=datos.tarifa_hora,
+        descripcion=datos.descripcion,
+        ubicacion=datos.ubicacion,
+    )
+    return await espacio_repository.crear(sesion, espacio)
 
-    async def crear(
-        self,
-        nombre: str,
-        capacidad: int,
-        tarifa_hora: float = 0.0,
-        descripcion: str | None = None,
-        ubicacion: str | None = None,
-    ) -> Espacio:
-        espacio = Espacio(
-            nombre=nombre,
-            capacidad=capacidad,
-            tarifa_hora=tarifa_hora,
-            descripcion=descripcion,
-            ubicacion=ubicacion,
-        )
-        return await self._repo.crear(espacio)
+async def actualizar(
+    sesion: AsyncSession,
+    espacio_id: int,
+    datos: ActualizarEspacioRequest,
+) -> Espacio | None:
+    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id)
+    if not espacio:
+        raise EspacioNoEncontradoException(espacio_id)
+    if datos.nombre is not None:
+        espacio.nombre = datos.nombre
+    if datos.capacidad is not None:
+        espacio.capacidad = datos.capacidad
+    if datos.tarifa_hora is not None:
+        espacio.tarifa_hora = datos.tarifa_hora
+    if datos.descripcion is not None:
+        espacio.descripcion = datos.descripcion
+    if datos.ubicacion is not None:
+        espacio.ubicacion = datos.ubicacion
+    if datos.estado is not None:
+        espacio.estado = datos.estado
+    return await espacio_repository.actualizar(sesion, espacio)
 
-    async def actualizar(
-        self,
-        espacio_id: int,
-        nombre: str | None = None,
-        capacidad: int | None = None,
-        tarifa_hora: float | None = None,
-        descripcion: str | None = None,
-        ubicacion: str | None = None,
-        estado: str | None = None,
-    ) -> Espacio | None:
-        espacio = await self._repo.obtener_por_id(espacio_id)
-        if not espacio:
-            raise EspacioNoEncontradoException(espacio_id)
-        if nombre is not None:
-            espacio.nombre = nombre
-        if capacidad is not None:
-            espacio.capacidad = capacidad
-        if tarifa_hora is not None:
-            espacio.tarifa_hora = tarifa_hora
-        if descripcion is not None:
-            espacio.descripcion = descripcion
-        if ubicacion is not None:
-            espacio.ubicacion = ubicacion
-        if estado is not None:
-            espacio.estado = estado
-        return await self._repo.actualizar(espacio)
-
-    async def eliminar(self, espacio_id: int) -> str:
-        espacio = await self._repo.obtener_por_id(espacio_id)
-        if not espacio:
-            raise EspacioNoEncontradoException(espacio_id)
-        reservas_count = await self._repo.contar_reservas_asociadas(espacio_id)
-        if reservas_count > 0:
-            espacio.estado = "inactivo"
-            await self._repo.actualizar(espacio)
-            return "inactivado"
-        else:
-            await self._repo.eliminar_fisico(espacio)
-            return "eliminado"
-
+async def eliminar(sesion: AsyncSession, espacio_id: int) -> str:
+    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id)
+    if not espacio:
+        raise EspacioNoEncontradoException(espacio_id)
+    reservas_count = await espacio_repository.contar_reservas_asociadas(sesion, espacio_id)
+    if reservas_count > 0:
+        espacio.estado = "inactivo"
+        await espacio_repository.actualizar(sesion, espacio)
+        return "inactivado"
+    else:
+        await espacio_repository.eliminar_fisico(sesion, espacio)
+        return "eliminado"

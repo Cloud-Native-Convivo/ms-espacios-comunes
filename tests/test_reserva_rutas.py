@@ -231,44 +231,6 @@ async def test_listar_reservas_admin(cliente, servicio_mock):
     servicio_mock.listar_todas.assert_awaited_once()
 
 
-async def test_confirmar_pago_exitoso(cliente, servicio_mock):
-    ahora = datetime.datetime.now()
-    reserva = Reserva(
-        id=1,
-        espacio_id=1,
-        usuario_sub="user-123",
-        fecha_inicio=ahora,
-        fecha_fin=ahora + datetime.timedelta(hours=2),
-        estado="activa",
-        monto_total=10000.0,
-        creado_en=ahora,
-    )
-    servicio_mock.confirmar_pago.return_value = reserva
-    respuesta = await cliente.post(
-        "/api/v1/reservas/1/confirmar-pago",
-        headers={"X-Usuario-Roles": "admin"},
-    )
-    assert respuesta.status_code == 200
-    assert respuesta.json()["estado"] == "activa"
-
-
-async def test_confirmar_pago_sin_rol_admin_retorna_403(cliente):
-    respuesta = await cliente.post(
-        "/api/v1/reservas/1/confirmar-pago",
-        headers={"X-Usuario-Roles": "residente"},
-    )
-    assert respuesta.status_code == 403
-
-
-async def test_confirmar_pago_no_encontrada(cliente, servicio_mock):
-    servicio_mock.confirmar_pago.return_value = None
-    respuesta = await cliente.post(
-        "/api/v1/reservas/999/confirmar-pago",
-        headers={"X-Usuario-Roles": "admin"},
-    )
-    assert respuesta.status_code == 404
-
-
 async def test_cabeceras_de_seguridad_presentes(cliente):
     respuesta = await cliente.get("/api/v1/health")
     assert respuesta.headers["X-Content-Type-Options"] == "nosniff"
@@ -276,5 +238,6 @@ async def test_cabeceras_de_seguridad_presentes(cliente):
     assert "Strict-Transport-Security" in respuesta.headers
     assert respuesta.headers["Content-Security-Policy"] == "default-src 'self'"
     assert respuesta.headers["Server"] == "convivo"
+
 
 

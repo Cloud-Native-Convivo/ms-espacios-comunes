@@ -33,19 +33,3 @@ async def listar_reservas(
     return await reserva_service.listar_por_usuario(sesion, x_usuario_sub)
 
 
-@router.post(
-    "/{reserva_id}/confirmar-pago",
-    responses={404: {"description": "Reserva no encontrada o no pendiente de pago"}},
-    dependencies=[Depends(requerir_roles(["admin"]))],
-)
-async def confirmar_pago_reserva(
-    reserva_id: int,
-    sesion: AsyncSession = Depends(obtener_sesion),
-) -> ReservaResponse:
-    reserva = await reserva_service.confirmar_pago(sesion, reserva_id)
-    if not reserva:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Reserva {reserva_id} no encontrada o no pendiente de pago",
-        )
-    return reserva

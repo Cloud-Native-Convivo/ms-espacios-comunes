@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 COLA_COMPENSACION = "gasto_fallido"
 COLA_PAGO = "reserva_pagada"
+EXCHANGE_DLX = "espacios_dlx"
+COLA_COMPENSACION_DLQ = "gasto_fallido_dlq"
+COLA_PAGO_DLQ = "reserva_pagada_dlq"
 
 
 async def procesar_compensacion(mensaje: aio_pika.IncomingMessage):
@@ -20,10 +23,10 @@ async def procesar_compensacion(mensaje: aio_pika.IncomingMessage):
         datos = GastoFallidoRequest.model_validate_json(mensaje.body)
     except Exception as error_json:
         logger.exception(
-            "Mensaje corrupto en cola compensación (descartado): %s",
+            "Mensaje corrupto en cola compensación (desviado a DLQ): %s",
             error_json,
         )
-        await mensaje.ack()
+        await mensaje.reject(requeue=False)
         return
 
     try:
@@ -58,10 +61,10 @@ async def procesar_pago(mensaje: aio_pika.IncomingMessage):
         datos = EventoPagoConfirmadoRequest.model_validate_json(mensaje.body)
     except Exception as error_json:
         logger.exception(
-            "Mensaje corrupto en cola confirmación de pago (descartado): %s",
+            "Mensaje corrupto en cola confirmación de pago (desviado a DLQ): %s",
             error_json,
         )
-        await mensaje.ack()
+        await mensaje.reject(requeue=False)
         return
 
     try:
@@ -97,6 +100,15 @@ async def consumidor_compensacion():
     canal = await conexion.channel()
     await canal.set_qos(prefetch_count=1)
 
+    # Dead Letter Exchange y Dead Letter Queues para descarte seguro
+    exchange_dlx = await canal.declare_exchange(
+        EXCHANGE_DLX, aio_pika.ExchangeType.DIRECT, durable=True
+    )
+    cola_comp_dlq = await canal.declare_queue(COLA_COMPENSACION_DLQ, durable=True)
+    cola_pago_dlq = await canal.declare_queue(COLA_PAGO_DLQ, durable=True)
+    await cola_comp_dlq.bind(exchange_dlx, routing_key=COLA_COMPENSACION_DLQ)
+    await cola_pago_dlq.bind(exchange_dlx, routing_key=COLA_PAGO_DLQ)
+
     # Mismo exchange que publica ms-gastos-comunes (RabbitMqConfig): sin
     # bind explicito, RabbitMQ nunca entrega los mensajes ruteados a este
     # exchange, aunque la cola exista y este declarada.
@@ -104,17 +116,32 @@ async def consumidor_compensacion():
         "espacios_events", aio_pika.ExchangeType.TOPIC, durable=True
     )
 
-    cola_compensacion = await canal.declare_queue(COLA_COMPENSACION, durable=True)
-    cola_pago = await canal.declare_queue(COLA_PAGO, durable=True)
+    cola_compensacion = await canal.declare_queue(
+        COLA_COMPENSACION,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": EXCHANGE_DLX,
+            "x-dead-letter-routing-key": COLA_COMPENSACION_DLQ,
+        },
+    )
+    cola_pago = await canal.declare_queue(
+        COLA_PAGO,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": EXCHANGE_DLX,
+            "x-dead-letter-routing-key": COLA_PAGO_DLQ,
+        },
+    )
     await cola_compensacion.bind(exchange, routing_key=COLA_COMPENSACION)
     await cola_pago.bind(exchange, routing_key=COLA_PAGO)
 
     await cola_compensacion.consume(procesar_compensacion)
     await cola_pago.consume(procesar_pago)
     logger.info(
-        "Consumidores RabbitMQ activos en colas '%s' y '%s'",
+        "Consumidores RabbitMQ activos en colas '%s' y '%s' (con DLX '%s')",
         COLA_COMPENSACION,
         COLA_PAGO,
+        EXCHANGE_DLX,
     )
 
     try:

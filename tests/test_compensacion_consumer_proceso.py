@@ -21,6 +21,16 @@ def _mensaje(cuerpo: dict):
     proceso.__aenter__ = AsyncMock(return_value=None)
     proceso.__aexit__ = AsyncMock(return_value=False)
     mensaje.process = MagicMock(return_value=proceso)
+    mensaje.reject = AsyncMock()
+    mensaje.ack = AsyncMock()
+    return mensaje
+
+
+def _mensaje_corrupto(cuerpo_bytes: bytes = b"invalido"):
+    mensaje = MagicMock()
+    mensaje.body = cuerpo_bytes
+    mensaje.reject = AsyncMock()
+    mensaje.ack = AsyncMock()
     return mensaje
 
 
@@ -46,6 +56,17 @@ async def test_procesa_mensaje_valido(procesar, cuerpo, funcion_servicio, encont
 
 
 @pytest.mark.parametrize(
+    "procesar",
+    [consumer.procesar_compensacion, consumer.procesar_pago],
+)
+async def test_mensaje_corrupto_se_rechaza_sin_requeue_hacia_dlq(procesar):
+    mensaje = _mensaje_corrupto()
+    await procesar(mensaje)
+    mensaje.reject.assert_awaited_once_with(requeue=False)
+    mensaje.ack.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
     ("procesar", "funcion_servicio"),
     [
         (consumer.procesar_compensacion, "compensar_por_gasto_fallido"),
@@ -63,11 +84,28 @@ async def test_error_operacional_no_se_propaga(procesar, funcion_servicio):
 
 
 async def test_consumidor_declara_colas_con_bind_y_cierra_al_cancelar():
-    exchange = MagicMock()
-    colas = {nombre: AsyncMock() for nombre in (consumer.COLA_COMPENSACION, consumer.COLA_PAGO)}
+    exchange_events = MagicMock()
+    exchange_dlx = MagicMock()
+
+    colas = {
+        consumer.COLA_COMPENSACION: AsyncMock(),
+        consumer.COLA_PAGO: AsyncMock(),
+        consumer.COLA_COMPENSACION_DLQ: AsyncMock(),
+        consumer.COLA_PAGO_DLQ: AsyncMock(),
+    }
+
+    def _mock_declare_exchange(nombre, tipo, durable):
+        return exchange_dlx if "dlx" in nombre else exchange_events
+
+    def _mock_declare_queue(nombre, durable=True, arguments=None):
+        cola = colas[nombre]
+        cola.nombre = nombre
+        cola.arguments = arguments
+        return cola
+
     canal = AsyncMock()
-    canal.declare_exchange = AsyncMock(return_value=exchange)
-    canal.declare_queue = AsyncMock(side_effect=lambda nombre, durable: colas[nombre])
+    canal.declare_exchange = AsyncMock(side_effect=_mock_declare_exchange)
+    canal.declare_queue = AsyncMock(side_effect=_mock_declare_queue)
     conexion = AsyncMock()
     conexion.channel = AsyncMock(return_value=canal)
 
@@ -80,8 +118,30 @@ async def test_consumidor_declara_colas_con_bind_y_cierra_al_cancelar():
             await tarea
 
     canal.set_qos.assert_awaited_once_with(prefetch_count=1)
-    colas[consumer.COLA_COMPENSACION].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_COMPENSACION)
-    colas[consumer.COLA_PAGO].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_PAGO)
+    # Verifica que declare el exchange de eventos y el DLX
+    assert canal.declare_exchange.await_count >= 2
+    # Verifica colas DLQ y bindings
+    colas[consumer.COLA_COMPENSACION_DLQ].bind.assert_awaited_once_with(
+        exchange_dlx, routing_key=consumer.COLA_COMPENSACION_DLQ
+    )
+    colas[consumer.COLA_PAGO_DLQ].bind.assert_awaited_once_with(
+        exchange_dlx, routing_key=consumer.COLA_PAGO_DLQ
+    )
+    # Verifica colas principales con bind al exchange principal y argumentos DLQ
+    colas[consumer.COLA_COMPENSACION].bind.assert_awaited_once_with(
+        exchange_events, routing_key=consumer.COLA_COMPENSACION
+    )
+    colas[consumer.COLA_PAGO].bind.assert_awaited_once_with(
+        exchange_events, routing_key=consumer.COLA_PAGO
+    )
+    assert colas[consumer.COLA_COMPENSACION].arguments == {
+        "x-dead-letter-exchange": consumer.EXCHANGE_DLX,
+        "x-dead-letter-routing-key": consumer.COLA_COMPENSACION_DLQ,
+    }
+    assert colas[consumer.COLA_PAGO].arguments == {
+        "x-dead-letter-exchange": consumer.EXCHANGE_DLX,
+        "x-dead-letter-routing-key": consumer.COLA_PAGO_DLQ,
+    }
     conexion.close.assert_awaited_once()
 
 
@@ -90,4 +150,3 @@ def test_gasto_fallido_request_acepta_camel_case():
     raw_json = '{"reservaId": "42", "motivo": "datos_inconsistentes"}'
     req = GastoFallidoRequest.model_validate_json(raw_json)
     assert req.reserva_id == 42
-

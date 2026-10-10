@@ -32,6 +32,7 @@ async def test_lifespan_registra_eureka_crea_tablas_y_detiene_tareas(eureka_fall
         patch.object(main, "relay_outbox", _tarea_inmediata),
         patch.object(main, "consumidor_compensacion", _tarea_inmediata),
         patch.object(main, "worker_expiracion", _tarea_inmediata),
+        patch.object(main, "consumidor_comandos", _tarea_inmediata),
     ):
         async with main.lifespan(main.app):
             pass
@@ -51,7 +52,9 @@ async def test_lifespan_sin_eureka_y_con_base_caida_igual_arranca():
         patch.object(main, "relay_outbox", _tarea_inmediata),
         patch.object(main, "consumidor_compensacion", _tarea_inmediata),
         patch.object(main, "worker_expiracion", _tarea_inmediata),
+        patch.object(main, "consumidor_comandos", _tarea_inmediata),
     ):
         async with main.lifespan(main.app):
             pass
     eureka.init_async.assert_not_called()
+

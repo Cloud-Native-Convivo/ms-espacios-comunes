@@ -62,6 +62,9 @@ async def test_obtener_pendientes_outbox(mock_sesion):
     mock_sesion.execute.return_value = res_mock
     res = await reserva_repository.obtener_pendientes_outbox(mock_sesion)
     assert len(res) == 1
+    consulta = mock_sesion.execute.call_args[0][0]
+    assert consulta._for_update_arg is not None
+    assert consulta._for_update_arg.skip_locked is True
 
 async def test_marcar_como_procesado(mock_sesion):
     evento = EventoOutbox(id=1, procesado=False)

@@ -67,6 +67,7 @@ async def obtener_pendientes_outbox(sesion: AsyncSession) -> list[EventoOutbox]:
         select(EventoOutbox)
         .where(EventoOutbox.procesado == False)  # noqa: E712
         .order_by(EventoOutbox.creado_en)
+        .with_for_update(skip_locked=True)
     )
     resultado = await sesion.execute(consulta)
     return list(resultado.scalars().all())

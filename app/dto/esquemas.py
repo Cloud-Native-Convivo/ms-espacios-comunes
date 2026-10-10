@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 # --- Espacios ---
 
@@ -53,14 +53,14 @@ class CrearReservaRequest(BaseModel):
 
 
 class GastoFallidoRequest(BaseModel):
-    reserva_id: int | None = None
+    reserva_id: int | None = Field(default=None, validation_alias=AliasChoices("reserva_id", "reservaId"))
     usuario_sub: str | None = None
     espacio_id: int | None = None
     fecha_inicio: datetime.datetime | None = None
 
 
 class EventoPagoConfirmadoRequest(BaseModel):
-    reserva_id: int
+    reserva_id: int = Field(..., validation_alias=AliasChoices("reserva_id", "reservaId"))
 
 
 class ReservaResponse(BaseModel):

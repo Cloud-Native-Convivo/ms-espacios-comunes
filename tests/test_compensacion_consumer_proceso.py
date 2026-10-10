@@ -83,3 +83,11 @@ async def test_consumidor_declara_colas_con_bind_y_cierra_al_cancelar():
     colas[consumer.COLA_COMPENSACION].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_COMPENSACION)
     colas[consumer.COLA_PAGO].bind.assert_awaited_once_with(exchange, routing_key=consumer.COLA_PAGO)
     conexion.close.assert_awaited_once()
+
+
+def test_gasto_fallido_request_acepta_camel_case():
+    from app.dto.esquemas import GastoFallidoRequest
+    raw_json = '{"reservaId": "42", "motivo": "datos_inconsistentes"}'
+    req = GastoFallidoRequest.model_validate_json(raw_json)
+    assert req.reserva_id == 42
+

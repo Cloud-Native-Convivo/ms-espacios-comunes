@@ -14,7 +14,7 @@ Plantilla adaptable. Al adaptarla a un proyecto real, sigue estas reglas — no 
 - Comentarios entre paréntesis que son guía-de-relleno se resuelven y desaparecen al aplicar la decisión. Comentarios que explican el PORQUÉ de una regla no son ruido a limpiar — son contenido, se conservan igual que el resto del detalle.
 - Ante la duda entre conservar o borrar: conservar, y marcar `(sin uso actual en este proyecto)` en vez de eliminar. El minimalismo de la sección 6 (Ponytail) rige código nuevo a escribir, no autoriza podar documentación de referencia ya redactada.
 - Sin emojis en código, PR, docs generadas ni output — usar solo como último recurso si no existe alternativa real, nunca como decoración por defecto. En commits rige lo que diga la sección 11: Gitmoji (§11.2) es obligatorio por convención.
-- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo) y a lo ya definido en `ERS.md`/`mvp.md` — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
+- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo) y a lo ya definido en `ERS.md` — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
 - Todo en español: funciones, variables, archivos, comentarios, mensajes de error.
 
 ## 0. Jerarquía de reglas

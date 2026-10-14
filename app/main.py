@@ -9,8 +9,8 @@ from py_eureka_client import eureka_client
 from app.api.router import api_router
 from app.config.database import motor
 from app.config.settings import settings
-from app.events.compensacion_consumer import consumidor_compensacion
 from app.events.comandos_consumer import consumidor_comandos
+from app.events.compensacion_consumer import consumidor_compensacion
 from app.events.expiracion_worker import worker_expiracion
 from app.events.outbox_event import relay_outbox
 from app.handler.exception_handler import registrar_manejadores_excepciones

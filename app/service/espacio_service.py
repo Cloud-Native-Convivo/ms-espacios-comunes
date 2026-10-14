@@ -1,19 +1,20 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.model.modelos import Espacio
 from app.repository import espacio_repository
-from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 
 
-async def listar_todos(sesion: AsyncSession) -> list[Espacio]:
-    return await espacio_repository.obtener_todos(sesion)
+async def listar_todos(sesion: AsyncSession, condominio_id: int) -> list[Espacio]:
+    return await espacio_repository.obtener_todos(sesion, condominio_id)
 
-async def obtener_por_id(sesion: AsyncSession, espacio_id: int) -> Espacio | None:
-    return await espacio_repository.obtener_por_id(sesion, espacio_id)
+async def obtener_por_id(sesion: AsyncSession, espacio_id: int, condominio_id: int) -> Espacio | None:
+    return await espacio_repository.obtener_por_id(sesion, espacio_id, condominio_id)
 
 async def crear(sesion: AsyncSession, datos: CrearEspacioRequest) -> Espacio:
     espacio = Espacio(
+        condominio_id=datos.condominio_id,
         nombre=datos.nombre,
         capacidad=datos.capacidad,
         tarifa_hora=datos.tarifa_hora,
@@ -25,9 +26,10 @@ async def crear(sesion: AsyncSession, datos: CrearEspacioRequest) -> Espacio:
 async def actualizar(
     sesion: AsyncSession,
     espacio_id: int,
+    condominio_id: int,
     datos: ActualizarEspacioRequest,
 ) -> Espacio | None:
-    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id)
+    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id, condominio_id)
     if not espacio:
         raise EspacioNoEncontradoException(espacio_id)
     if datos.nombre is not None:
@@ -44,8 +46,8 @@ async def actualizar(
         espacio.estado = datos.estado
     return await espacio_repository.actualizar(sesion, espacio)
 
-async def eliminar(sesion: AsyncSession, espacio_id: int) -> str:
-    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id)
+async def eliminar(sesion: AsyncSession, espacio_id: int, condominio_id: int) -> str:
+    espacio = await espacio_repository.obtener_por_id(sesion, espacio_id, condominio_id)
     if not espacio:
         raise EspacioNoEncontradoException(espacio_id)
     reservas_count = await espacio_repository.contar_reservas_asociadas(sesion, espacio_id)

@@ -14,3 +14,13 @@ def requerir_roles(roles_permitidos: list[str]):
         return roles
 
     return verificador
+
+
+def obtener_usuario_actual(x_usuario_sub: str | None = Header(default=None)) -> str:
+    """Extrae y valida que X-Usuario-Sub este presente y no vacio."""
+    if not x_usuario_sub or not x_usuario_sub.strip():
+        raise HTTPException(
+            status_code=401,
+            detail="Identificador de usuario faltante o inválido",
+        )
+    return x_usuario_sub.strip()

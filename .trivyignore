@@ -1,0 +1,6 @@
+# Archivo de excepciones temporales de Trivy para ms-espacios-comunes
+# Formato:
+# CVE-YYYY-XXXXX # [EXPIRACION YYYY-MM-DD] [JUSTIFICACION: descripcion del motivo]
+#
+# Regla del proyecto: Toda excepcion debe documentar el CVE, la fecha limite de expiracion
+# y la justificacion tecnica de por que no puede remediarse upstream inmediatamente.

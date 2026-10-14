@@ -26,15 +26,21 @@ async def cliente(servicio_mock):
 
 async def test_listar_espacios_vacio(cliente, servicio_mock):
     servicio_mock.listar_todos.return_value = []
-    respuesta = await cliente.get("/api/v1/espacios/")
+    respuesta = await cliente.get("/api/v1/espacios/?condominio_id=1")
     assert respuesta.status_code == 200
     assert respuesta.json() == []
+
+
+async def test_listar_espacios_sin_condominio_id_retorna_422(cliente):
+    respuesta = await cliente.get("/api/v1/espacios/")
+    assert respuesta.status_code == 422
 
 
 async def test_obtener_espacio_existente(cliente, servicio_mock):
     ahora = datetime.datetime.now()
     espacio = Espacio(
         id=1,
+        condominio_id=1,
         nombre="Sala Multiuso",
         descripcion="Sala grande",
         capacidad=50,
@@ -45,24 +51,38 @@ async def test_obtener_espacio_existente(cliente, servicio_mock):
     )
     servicio_mock.obtener_por_id.return_value = espacio
 
-    respuesta = await cliente.get("/api/v1/espacios/1")
+    respuesta = await cliente.get("/api/v1/espacios/1?condominio_id=1")
     assert respuesta.status_code == 200
     assert respuesta.json()["nombre"] == "Sala Multiuso"
     assert respuesta.json()["id"] == 1
+    servicio_mock.obtener_por_id.assert_awaited_once()
+    assert servicio_mock.obtener_por_id.call_args.args[2] == 1
 
 
 async def test_obtener_espacio_no_encontrado(cliente, servicio_mock):
     servicio_mock.obtener_por_id.return_value = None
 
-    respuesta = await cliente.get("/api/v1/espacios/999")
+    respuesta = await cliente.get("/api/v1/espacios/999?condominio_id=1")
     assert respuesta.status_code == 404
     assert "no encontrado" in respuesta.json()["detail"]
+
+
+async def test_obtener_espacio_de_otro_condominio_retorna_404(cliente, servicio_mock):
+    # El servicio ya filtra por condominio; un id que existe pero no es del
+    # condominio pedido se comporta igual que "no existe" (sin fuga de datos).
+    servicio_mock.obtener_por_id.return_value = None
+
+    respuesta = await cliente.get("/api/v1/espacios/1?condominio_id=99")
+    assert respuesta.status_code == 404
+    servicio_mock.obtener_por_id.assert_awaited_once()
+    assert servicio_mock.obtener_por_id.call_args.args[2] == 99
 
 
 async def test_crear_espacio_exitoso(cliente, servicio_mock):
     ahora = datetime.datetime.now()
     espacio = Espacio(
         id=2,
+        condominio_id=1,
         nombre="Piscina",
         capacidad=20,
         tarifa_hora=12000.0,
@@ -72,7 +92,7 @@ async def test_crear_espacio_exitoso(cliente, servicio_mock):
     )
     servicio_mock.crear.return_value = espacio
 
-    datos = {"nombre": "Piscina", "capacidad": 20, "tarifa_hora": 12000.0}
+    datos = {"condominio_id": 1, "nombre": "Piscina", "capacidad": 20, "tarifa_hora": 12000.0}
     respuesta = await cliente.post(
         "/api/v1/espacios/",
         json=datos,
@@ -107,6 +127,7 @@ async def test_actualizar_espacio_exitoso(cliente, servicio_mock):
     ahora = datetime.datetime.now()
     espacio = Espacio(
         id=1,
+        condominio_id=1,
         nombre="Piscina Climatizada",
         capacidad=25,
         tarifa_hora=15000.0,
@@ -118,7 +139,7 @@ async def test_actualizar_espacio_exitoso(cliente, servicio_mock):
 
     datos = {"nombre": "Piscina Climatizada", "capacidad": 25}
     respuesta = await cliente.put(
-        "/api/v1/espacios/1",
+        "/api/v1/espacios/1?condominio_id=1",
         json=datos,
         headers={"X-Usuario-Roles": "admin"},
     )
@@ -139,7 +160,7 @@ async def test_eliminar_espacio_exitoso_retorna_204(cliente, servicio_mock):
     servicio_mock.eliminar.return_value = "eliminado"
 
     respuesta = await cliente.delete(
-        "/api/v1/espacios/1",
+        "/api/v1/espacios/1?condominio_id=1",
         headers={"X-Usuario-Roles": "admin"},
     )
     assert respuesta.status_code == 204
@@ -165,7 +186,7 @@ async def test_eliminar_espacio_no_encontrado_retorna_404(cliente, servicio_mock
     servicio_mock.eliminar.side_effect = EspacioNoEncontradoException(999)
 
     respuesta = await cliente.delete(
-        "/api/v1/espacios/999",
+        "/api/v1/espacios/999?condominio_id=1",
         headers={"X-Usuario-Roles": "admin"},
     )
     assert respuesta.status_code == 404

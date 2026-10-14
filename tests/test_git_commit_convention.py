@@ -2,6 +2,7 @@
 Alineado con pr-quality.yml y AGENTS.md §11.2.
 """
 import re
+
 import pytest
 
 GITMOJI_CONVENTIONAL_PATTERN = re.compile(

@@ -1,9 +1,12 @@
 import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.model.modelos import EventoOutbox, Reserva
 from app.repository import reserva_repository
-from app.model.modelos import Reserva, EventoOutbox
+
 
 @pytest.fixture
 def mock_sesion():

@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dto.esquemas import CrearReservaRequest
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
     ReservaEspacioNoDisponibleException,
@@ -11,9 +12,7 @@ from app.exception.reserva_exception import (
     ReservaSolapamientoException,
 )
 from app.model.modelos import EventoOutbox, Reserva
-from app.repository import espacio_repository
-from app.repository import reserva_repository
-from app.dto.esquemas import CrearReservaRequest
+from app.repository import espacio_repository, reserva_repository
 
 
 async def crear(

@@ -1,9 +1,12 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.repository import espacio_repository
-from app.model.modelos import Espacio
+
 from app.dto.esquemas import CrearEspacioRequest
+from app.model.modelos import Espacio
+from app.repository import espacio_repository
+
 
 @pytest.fixture
 def mock_sesion():

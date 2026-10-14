@@ -1,6 +1,7 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+
 from app.api.v1.health_router import router
 
 app_test = FastAPI()

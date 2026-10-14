@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.model.modelos import Espacio
 from app.repository import espacio_repository
-from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 
 
 async def listar_todos(sesion: AsyncSession) -> list[Espacio]:

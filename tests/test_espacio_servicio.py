@@ -1,9 +1,12 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from app.service import espacio_service
-from app.model.modelos import Espacio
-from app.dto.esquemas import CrearEspacioRequest, ActualizarEspacioRequest
+
+import pytest
+
+from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 from app.exception.espacio_exception import EspacioNoEncontradoException
+from app.model.modelos import Espacio
+from app.service import espacio_service
+
 
 @pytest.fixture
 def mock_sesion(): return AsyncMock()

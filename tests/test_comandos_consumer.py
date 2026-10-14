@@ -1,11 +1,12 @@
-from unittest.mock import AsyncMock, MagicMock, patch
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.events.comandos_consumer import procesar_comando_mutacion
 from app.exception.reserva_exception import ReservaSolapamientoException
 from app.model.solicitud_job import SolicitudJob
-from app.events.comandos_consumer import procesar_comando_mutacion
 
 
 @pytest.fixture

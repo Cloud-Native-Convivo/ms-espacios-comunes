@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.model.solicitud_job import SolicitudJob
 from app.repository import job_repository
 

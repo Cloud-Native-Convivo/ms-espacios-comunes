@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import obtener_sesion
 from app.dto.esquemas import CrearReservaRequest, ReservaResponse
-from app.middleware.auth_roles import requerir_roles
+from app.middleware.auth_roles import obtener_usuario_actual, requerir_roles
+from app.repository import reserva_repository
 from app.service import reserva_service
 
 router = APIRouter(prefix="/reservas", tags=["reservas"])
@@ -31,5 +32,30 @@ async def listar_reservas(
     if "admin" in roles or "administrador" in roles or "conserje" in roles:
         return await reserva_service.listar_todas(sesion)
     return await reserva_service.listar_por_usuario(sesion, x_usuario_sub)
+
+
+@router.delete(
+    "/{reserva_id}",
+    response_model=ReservaResponse,
+    dependencies=[Depends(requerir_roles(["residente", "admin", "conserje"]))],
+)
+async def cancelar_reserva(
+    reserva_id: int,
+    usuario_sub: str = Depends(obtener_usuario_actual),
+    x_usuario_roles: str = Header(default=""),
+    sesion: AsyncSession = Depends(obtener_sesion),
+) -> ReservaResponse:
+    reserva = await reserva_repository.obtener_por_id(sesion, reserva_id)
+    if not reserva:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+
+    roles = {r.strip().lower() for r in x_usuario_roles.split(",") if r.strip()}
+    es_admin_o_conserje = bool({"admin", "administrador", "conserje"}.intersection(roles))
+
+    if not es_admin_o_conserje and reserva.usuario_sub != usuario_sub:
+        raise HTTPException(status_code=403, detail="No autorizado para cancelar esta reserva")
+
+    reserva_cancelada = await reserva_service.cancelar_por_id(sesion, reserva_id)
+    return reserva_cancelada or reserva
 
 

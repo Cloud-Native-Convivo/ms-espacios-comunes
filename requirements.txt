@@ -702,6 +702,10 @@ multidict==7.0.0 \
     --hash=sha256:fab276e931979bf1f093dd12e7caf9838f333f319aa88c2654e4abb6532385d7 \
     --hash=sha256:fd418115d9eb5731c281a18141a87a84ae5210aa59ffcf4ecf69eaf8428ed88f
     # via yarl
+opentelemetry-api==1.45.1 \
+    --hash=sha256:aa38ed19bcc084ba42782a73255b3582283eced7ad6dddbd6695189e69adfb75 \
+    --hash=sha256:b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb
+    # via fastapi
 oracledb==26.0.1 \
     --hash=sha256:03424ccfbd25c402133c2a23c5c1a630e57effda7b962085d91c41d765af1b25 \
     --hash=sha256:0453f8f1a6748c982dcdac8af09bcd81971979c7ec9d1d151e15595f58d9164b \

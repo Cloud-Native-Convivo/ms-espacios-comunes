@@ -252,20 +252,22 @@ Permite ejecutar el código de FastAPI directamente en la máquina anfitriona mi
 
 ---
 
-### Ejecución de Pruebas Automatizadas
+### Ejecución de Pruebas Automatizadas y Verificación Pre-push
 
-El proyecto cuenta con una suite integral de 31 pruebas unitarias y de integración que cubren validaciones horarias, tarificación, bloqueos pesimistas, tareas en segundo plano y RBAC:
+El microservicio utiliza `pytest` como runner nativo de verificación. Antes de realizar `git push` o abrir un Pull Request, ejecutar las validaciones locales:
 
 ```bash
-# Ejecutar todas las pruebas con salida detallada
+# 1. Ejecutar suite completa (incluye pruebas unitarias, integración y validación Gitmoji)
 pytest tests/ -v
 
-# Ejecutar una suite específica
-pytest tests/test_reserva_rutas.py -v
+# 2. Validar únicamente la convención de commits Gitmoji
+pytest tests/test_git_commit_convention.py -v
 
-# Validar formato y calidad de código con Ruff
+# 3. Validar calidad de código y estilo con Ruff
 ruff check .
 ```
+
+> **Nota de CI**: `tests/test_git_commit_convention.py` asegura que cualquier mensaje de commit respete la sintaxis Gitmoji + Conventional Commits (`pr-quality.yml`) antes de que el trabajo llegue a GitHub Actions.
 
 ---
 

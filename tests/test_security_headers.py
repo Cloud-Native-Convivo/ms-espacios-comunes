@@ -58,7 +58,7 @@ async def test_csp_en_api_mantiene_politica_estricta(cliente, servicio_mock):
     servicio_mock.listar_todos.return_value = []
 
     # Verificación en endpoint de negocio
-    respuesta_espacios = await cliente.get("/api/v1/espacios/")
+    respuesta_espacios = await cliente.get("/api/v1/espacios/", params={"condominio_id": 1})
     assert respuesta_espacios.status_code == 200
     assert respuesta_espacios.headers.get("Content-Security-Policy") == CSP_ESTRICTO_ESPERADO
 

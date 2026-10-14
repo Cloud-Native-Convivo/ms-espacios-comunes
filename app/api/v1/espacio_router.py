@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import obtener_sesion
@@ -15,16 +15,18 @@ router = APIRouter(prefix="/espacios", tags=["espacios"])
 
 @router.get("/")
 async def listar_espacios(
+    condominio_id: int = Query(..., gt=0),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> list[EspacioResponse]:
-    return await espacio_service.listar_todos(sesion)
+    return await espacio_service.listar_todos(sesion, condominio_id)
 
 @router.get("/{espacio_id}")
 async def obtener_espacio(
     espacio_id: int,
+    condominio_id: int = Query(..., gt=0),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> EspacioResponse:
-    espacio = await espacio_service.obtener_por_id(sesion, espacio_id)
+    espacio = await espacio_service.obtener_por_id(sesion, espacio_id, condominio_id)
     if not espacio:
         raise EspacioNoEncontradoException(espacio_id)
     return espacio
@@ -47,9 +49,10 @@ async def crear_espacio(
 async def actualizar_espacio(
     espacio_id: int,
     datos: ActualizarEspacioRequest,
+    condominio_id: int = Query(..., gt=0),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> EspacioResponse:
-    return await espacio_service.actualizar(sesion, espacio_id, datos)
+    return await espacio_service.actualizar(sesion, espacio_id, condominio_id, datos)
 
 @router.delete(
     "/{espacio_id}",
@@ -58,7 +61,8 @@ async def actualizar_espacio(
 )
 async def eliminar_espacio(
     espacio_id: int,
+    condominio_id: int = Query(..., gt=0),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> None:
-    await espacio_service.eliminar(sesion, espacio_id)
+    await espacio_service.eliminar(sesion, espacio_id, condominio_id)
     return None

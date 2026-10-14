@@ -20,8 +20,10 @@ class Base(DeclarativeBase):
 
 class Espacio(Base):
     __tablename__ = "espacios"
+    __table_args__ = (Index("ix_espacios_condominio_id", "condominio_id"),)
 
     id: Mapped[int] = mapped_column(Integer, Identity(start=1), primary_key=True)
+    condominio_id: Mapped[int] = mapped_column(Integer, nullable=False)
     nombre: Mapped[str] = mapped_column(String(200), nullable=False)
     descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
     capacidad: Mapped[int] = mapped_column(Integer, nullable=False)

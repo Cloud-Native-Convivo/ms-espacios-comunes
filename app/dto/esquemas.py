@@ -5,6 +5,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 # --- Espacios ---
 
 class CrearEspacioRequest(BaseModel):
+    condominio_id: int = Field(..., gt=0)
     nombre: str = Field(..., min_length=1, max_length=100)
     capacidad: int = Field(..., gt=0, le=5000)
     tarifa_hora: float = Field(default=0.0, ge=0.0, le=10_000_000.0)
@@ -28,6 +29,7 @@ class EspacioResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    condominio_id: int
     nombre: str
     descripcion: str | None = None
     capacidad: int

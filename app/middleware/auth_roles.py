@@ -1,15 +1,30 @@
 from fastapi import Header, HTTPException
+from app.config.security_config import (
+    UsuarioContexto,
+    normalizar_roles,
+    obtener_contexto_usuario,
+    requerir_roles_contexto,
+)
+
+__all__ = [
+    "UsuarioContexto",
+    "normalizar_roles",
+    "obtener_contexto_usuario",
+    "requerir_roles_contexto",
+    "requerir_roles",
+    "obtener_usuario_actual",
+]
 
 
 def requerir_roles(roles_permitidos: list[str]):
     """Dependencia de FastAPI para validar roles en header X-Usuario-Roles."""
+    permitidos_normalizados = set()
+    for r in roles_permitidos:
+        permitidos_normalizados.update(normalizar_roles(r))
+
     def verificador(x_usuario_roles: str = Header(default="")) -> set[str]:
-        roles = {r.strip().lower() for r in x_usuario_roles.split(",") if r.strip()}
-        if "administrador" in roles:
-            roles.add("admin")
-        if "admin" in roles:
-            roles.add("administrador")
-        if not roles.intersection({r.lower() for r in roles_permitidos}):
+        roles = normalizar_roles(x_usuario_roles)
+        if not roles.intersection(permitidos_normalizados):
             raise HTTPException(status_code=403, detail="Permisos insuficientes")
         return roles
 

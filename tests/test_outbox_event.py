@@ -1,6 +1,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import aio_pika
 import pytest
 
 from app.events.outbox_event import relay_outbox
@@ -37,5 +38,6 @@ async def test_relay_publica_pendientes_y_los_marca_procesados():
     mensaje = exchange.publish.await_args.args[0]
     assert mensaje.body == b'{"id": 1}'
     assert exchange.publish.await_args.kwargs["routing_key"] == "reserva_espacio_creada"
+    assert mensaje.delivery_mode == aio_pika.DeliveryMode.PERSISTENT
     repo.marcar_como_procesado.assert_awaited_once_with(sesion, evento)
     sesion.commit.assert_awaited_once()

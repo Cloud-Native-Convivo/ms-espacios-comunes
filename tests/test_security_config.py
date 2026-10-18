@@ -1,11 +1,13 @@
 import pytest
 from fastapi import HTTPException
+
 from app.config.security_config import (
     UsuarioContexto,
     normalizar_roles,
     obtener_contexto_usuario,
     requerir_roles_contexto,
 )
+
 
 def test_normalizar_roles_bidireccional():
     assert "admin" in normalizar_roles("administrador")

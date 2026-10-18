@@ -1,4 +1,5 @@
 from fastapi import Header, HTTPException
+
 from app.config.security_config import (
     UsuarioContexto,
     normalizar_roles,

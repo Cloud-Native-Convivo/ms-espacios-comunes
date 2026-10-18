@@ -1,6 +1,8 @@
 import pytest
+
+from app.config.security_config import UsuarioContexto, normalizar_roles
 from app.middleware.auth_roles import obtener_usuario_actual, requerir_roles
-from app.config.security_config import normalizar_roles, UsuarioContexto
+
 
 def test_auth_roles_reexport_contract():
     assert callable(obtener_usuario_actual)

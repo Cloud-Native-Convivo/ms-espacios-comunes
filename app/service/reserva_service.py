@@ -67,7 +67,11 @@ async def crear(
             "El identificador de usuario no puede estar vacío"
         )
 
-    ahora = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    # Hora local, sin cambios respecto al comportamiento anterior: solo se usa
+    # para validar fecha_inicio/fecha_fin (nunca se guardan ni se devuelven
+    # distinto). El UTC queda acotado a expira_en (ver más abajo), que es lo
+    # único que compara expiracion_worker.py.
+    ahora = datetime.datetime.now()
     fecha_inicio_cmp = (
         datos.fecha_inicio.replace(tzinfo=None)
         if datos.fecha_inicio.tzinfo
@@ -111,7 +115,10 @@ async def crear(
     duracion_segundos = (fecha_fin_cmp - fecha_inicio_cmp).total_seconds()
     duracion_horas = duracion_segundos / 3600.0
     monto_total = round(duracion_horas * tarifa_hora, 2)
-    expira_en = ahora + datetime.timedelta(minutes=15)
+    # UTC acá sí, a propósito: expiracion_worker.py compara expira_en contra
+    # su propio "ahora" en UTC (ver Tarea E9) — deben compartir la misma base
+    # para que los 15 minutos signifiquen lo mismo en creación y en el worker.
+    expira_en = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) + datetime.timedelta(minutes=15)
 
     reserva = Reserva(
         espacio_id=datos.espacio_id,

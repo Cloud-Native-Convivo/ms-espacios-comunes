@@ -26,6 +26,8 @@ from app.service import espacio_service, reserva_service
 logger = logging.getLogger(__name__)
 
 COLA_COMANDOS = "espacios_comandos_queue"
+COLA_COMANDOS_DLQ = "espacios_comandos_dlq"
+EXCHANGE_DLX = "espacios_dlx"
 
 
 async def procesar_comando_mutacion(sesion, comando: dict):
@@ -175,9 +177,23 @@ async def consumidor_comandos():
     )
     canal = await conexion.channel()
     await canal.set_qos(prefetch_count=5)
-    cola = await canal.declare_queue(COLA_COMANDOS, durable=True)
+
+    exchange_dlx = await canal.declare_exchange(
+        EXCHANGE_DLX, aio_pika.ExchangeType.DIRECT, durable=True
+    )
+    cola_dlq = await canal.declare_queue(COLA_COMANDOS_DLQ, durable=True)
+    await cola_dlq.bind(exchange_dlx, routing_key=COLA_COMANDOS_DLQ)
+
+    cola = await canal.declare_queue(
+        COLA_COMANDOS,
+        durable=True,
+        arguments={
+            "x-dead-letter-exchange": EXCHANGE_DLX,
+            "x-dead-letter-routing-key": COLA_COMANDOS_DLQ,
+        },
+    )
     await cola.consume(procesar_mensaje_comando)
-    logger.info("Consumidor RabbitMQ activo en cola '%s'", COLA_COMANDOS)
+    logger.info("Consumidor RabbitMQ activo en cola '%s' (con DLX '%s')", COLA_COMANDOS, EXCHANGE_DLX)
 
     try:
         await asyncio.Future()

@@ -18,13 +18,19 @@ COMPLETADO = "COMPLETADO"
 async def reclamar(
     sesion: AsyncSession, event_id: str, consumidor: str, retomar_en_curso: bool = False
 ) -> str:
+    """Reserva event_id+consumidor con un INSERT. Usa SAVEPOINT (begin_nested)
+    en vez de sesion.rollback(): esta función no es dueña de la sesión que
+    recibe — un rollback de toda la sesión deshacía cualquier otro trabajo
+    pendiente que el llamador tuviera ahí (ver consumidor_notificaciones_base.py,
+    que reusa la misma sesión para completar/liberar después de reclamar).
+    """
     try:
-        sesion.add(EventoProcesado(event_id=event_id, consumidor=consumidor, estado=EN_CURSO))
-        await sesion.flush()
+        async with sesion.begin_nested():
+            sesion.add(EventoProcesado(event_id=event_id, consumidor=consumidor, estado=EN_CURSO))
+            await sesion.flush()
         await sesion.commit()
         return NUEVO
     except IntegrityError:
-        await sesion.rollback()
         registro = await sesion.get(EventoProcesado, (event_id, consumidor))
         if registro.estado == EN_CURSO and retomar_en_curso:
             return NUEVO

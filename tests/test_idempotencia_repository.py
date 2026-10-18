@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -14,9 +14,20 @@ from app.repository.idempotencia_repository import (
 )
 
 
+def _savepoint(lanza: Exception | None = None):
+    """Simula sesion.begin_nested(): si `lanza` no es None, __aexit__ deja
+    que la excepcion se propague (como el SAVEPOINT real de SQLAlchemy)."""
+    contexto = MagicMock()
+    contexto.__aenter__ = AsyncMock(return_value=None)
+    contexto.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=contexto)
+
+
 @pytest.fixture
 def mock_sesion():
-    return AsyncMock()
+    sesion = AsyncMock()
+    sesion.begin_nested = _savepoint()
+    return sesion
 
 
 async def test_reclamar_nuevo_evento(mock_sesion):
@@ -35,7 +46,6 @@ async def test_reclamar_evento_en_curso_sin_retomar(mock_sesion):
     resultado = await reclamar(mock_sesion, "e1", "worker_a")
 
     assert resultado == EN_CURSO
-    mock_sesion.rollback.assert_awaited_once()
 
 
 async def test_reclamar_evento_en_curso_con_retomar(mock_sesion):
@@ -58,6 +68,22 @@ async def test_reclamar_evento_completado_nunca_se_retoma(mock_sesion):
     resultado = await reclamar(mock_sesion, "e3", "worker_a", retomar_en_curso=True)
 
     assert resultado == COMPLETADO
+
+
+async def test_reclamar_duplicado_usa_savepoint_y_no_hace_rollback_de_toda_la_sesion(mock_sesion):
+    """El rollback de un duplicado debe deshacer solo el INSERT fallido (SAVEPOINT),
+    nunca toda la sesión — si no, se perdería cualquier otro trabajo pendiente
+    en la misma sesión (ver consumidor_notificaciones_base.py, que reusa la
+    sesión para completar/liberar después de reclamar)."""
+    mock_sesion.flush = AsyncMock(side_effect=IntegrityError("stmt", {}, Exception("dup")))
+    mock_sesion.get = AsyncMock(
+        return_value=EventoProcesado(event_id="e4", consumidor="worker_a", estado=EN_CURSO)
+    )
+
+    await reclamar(mock_sesion, "e4", "worker_a")
+
+    mock_sesion.begin_nested.assert_called_once()
+    mock_sesion.rollback.assert_not_awaited()
 
 
 async def test_completar_marca_estado(mock_sesion):

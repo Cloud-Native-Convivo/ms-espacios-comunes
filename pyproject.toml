@@ -36,7 +36,10 @@ include = ["app*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=app --cov-branch --cov-fail-under=60 --cov-report=term-missing"
+addopts = "--cov=app --cov-branch --cov-fail-under=60 --cov-report=term-missing -m \"not integracion\""
+markers = [
+    "integracion: requiere la base de datos real del proyecto (docker-compose); no corre en la suite normal, usar `pytest -m integracion`",
+]
 
 [tool.coverage.run]
 relative_files = true

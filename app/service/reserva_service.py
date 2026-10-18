@@ -13,6 +13,7 @@ from app.exception.reserva_exception import (
 )
 from app.model.modelos import EventoOutbox, Espacio, Reserva
 from app.repository import espacio_repository, reserva_repository
+from app.util.tiempo import ahora_utc
 
 
 def payload_reserva(
@@ -105,7 +106,14 @@ async def crear(
         raise ReservaEspacioNoDisponibleException(datos.espacio_id, espacio.estado)
     tarifa_hora = float(espacio.tarifa_hora) if espacio.tarifa_hora else 0.0
 
-    if await reserva_repository.existe_solapamiento(sesion, datos.espacio_id, datos.fecha_inicio, datos.fecha_fin):
+    # Mismo ahora_utc() para existe_solapamiento y para expira_en más abajo:
+    # las dos comparaciones deben usar exactamente el mismo reloj (ver
+    # app/util/tiempo.py) — nunca func.now(), que en Oracle devuelve la hora
+    # de la zona de la SESIÓN, no UTC.
+    ahora_utc_actual = ahora_utc()
+    if await reserva_repository.existe_solapamiento(
+        sesion, datos.espacio_id, datos.fecha_inicio, datos.fecha_fin, ahora_utc_actual
+    ):
         raise ReservaSolapamientoException(
             datos.espacio_id,
             datos.fecha_inicio.isoformat(),
@@ -115,10 +123,7 @@ async def crear(
     duracion_segundos = (fecha_fin_cmp - fecha_inicio_cmp).total_seconds()
     duracion_horas = duracion_segundos / 3600.0
     monto_total = round(duracion_horas * tarifa_hora, 2)
-    # UTC acá sí, a propósito: expiracion_worker.py compara expira_en contra
-    # su propio "ahora" en UTC (ver Tarea E9) — deben compartir la misma base
-    # para que los 15 minutos signifiquen lo mismo en creación y en el worker.
-    expira_en = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) + datetime.timedelta(minutes=15)
+    expira_en = ahora_utc_actual + datetime.timedelta(minutes=15)
 
     reserva = Reserva(
         espacio_id=datos.espacio_id,

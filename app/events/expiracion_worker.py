@@ -1,11 +1,11 @@
 import asyncio
-import datetime
 import logging
 
 from app.config.database import fabrica_sesiones
 from app.model.modelos import EventoOutbox, Espacio
 from app.repository import reserva_repository
 from app.service.reserva_service import payload_reserva
+from app.util.tiempo import ahora_utc
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ async def worker_expiracion(intervalo_segundos: int = 60) -> None:
     logger.info("Iniciando worker de expiración de reservas (intervalo: %ss)...", intervalo_segundos)
     while True:
         try:
-            ahora = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            ahora = ahora_utc()
             async with fabrica_sesiones() as sesion:
                 expiradas = await reserva_repository.obtener_expiradas(sesion, ahora)
                 if expiradas:

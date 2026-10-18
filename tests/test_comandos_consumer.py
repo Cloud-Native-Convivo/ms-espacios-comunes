@@ -72,6 +72,34 @@ async def test_procesar_comando_crear_reserva_conflicto_solapamiento(mock_sesion
 
 
 @pytest.mark.asyncio
+async def test_procesar_comando_crear_reserva_propaga_usuario_email(mock_sesion):
+    comando = {
+        "ticket_id": "ticket-email-1",
+        "modulo": "ESPACIOS",
+        "accion": "CREAR_RESERVA",
+        "usuario_id": "user-1",
+        "usuario_email": "ana@convivo.cl",
+        "rol": "residente",
+        "payload": {
+            "espacio_id": 1,
+            "fecha_inicio": "2026-10-15T18:00:00Z",
+            "fecha_fin": "2026-10-15T20:00:00Z",
+        },
+    }
+    mock_reserva = MagicMock(id=101, estado="pendiente_pago")
+
+    with patch(
+        "app.events.comandos_consumer.reserva_service.crear",
+        new=AsyncMock(return_value=mock_reserva),
+    ) as crear_mock:
+        await procesar_comando_mutacion(mock_sesion, comando)
+
+    crear_mock.assert_awaited_once()
+    _, kwargs = crear_mock.await_args
+    assert kwargs["usuario_email"] == "ana@convivo.cl"
+
+
+@pytest.mark.asyncio
 async def test_procesar_comando_cancelar_reserva(mock_sesion):
     comando = {
         "ticket_id": "ticket-789",

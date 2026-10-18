@@ -35,6 +35,7 @@ async def procesar_comando_mutacion(sesion, comando: dict):
     modulo = comando.get("modulo", "ESPACIOS")
     accion = comando.get("accion", "")
     usuario_id = comando.get("usuario_id", "")
+    usuario_email = comando.get("usuario_email")
     rol = comando.get("rol", "")
     payload = comando.get("payload") or {}
 
@@ -56,7 +57,9 @@ async def procesar_comando_mutacion(sesion, comando: dict):
         resultado = None
         if accion == "CREAR_RESERVA":
             req = CrearReservaRequest(**payload)
-            reserva = await reserva_service.crear(sesion, req, usuario_sub=usuario_id)
+            reserva = await reserva_service.crear(
+                sesion, req, usuario_sub=usuario_id, usuario_email=usuario_email
+            )
             resultado = {
                 "id": getattr(reserva, "id", None),
                 "espacio_id": getattr(reserva, "espacio_id", None),

@@ -34,7 +34,7 @@ def mock_reserva_repo():
         yield m
 
 async def test_crear_reserva_exitosa(mock_sesion, mock_espacio_repo, mock_reserva_repo):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=1),
@@ -53,7 +53,7 @@ async def test_crear_reserva_exitosa(mock_sesion, mock_espacio_repo, mock_reserv
     assert reserva.monto_total == 20000.0
 
 async def test_crear_reserva_solapamiento(mock_sesion, mock_espacio_repo, mock_reserva_repo):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=1),
@@ -66,7 +66,7 @@ async def test_crear_reserva_solapamiento(mock_sesion, mock_espacio_repo, mock_r
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_crear_reserva_fecha_fin_antes(mock_sesion):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=3),
@@ -77,7 +77,7 @@ async def test_crear_reserva_fecha_fin_antes(mock_sesion):
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_crear_reserva_fecha_en_el_pasado(mock_sesion):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now - datetime.timedelta(hours=2),
@@ -88,7 +88,7 @@ async def test_crear_reserva_fecha_en_el_pasado(mock_sesion):
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_crear_reserva_duracion_excesiva(mock_sesion):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=1),
@@ -99,7 +99,7 @@ async def test_crear_reserva_duracion_excesiva(mock_sesion):
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_crear_reserva_usuario_sub_vacio(mock_sesion):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=1),
@@ -114,7 +114,7 @@ async def test_listar_reservas_usuario_sub_vacio(mock_sesion):
         await reserva_service.listar_por_usuario(mock_sesion, "   ")
 
 async def test_crear_reserva_espacio_no_encontrado(mock_sesion, mock_espacio_repo):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=999,
         fecha_inicio=now + datetime.timedelta(hours=1),
@@ -126,7 +126,7 @@ async def test_crear_reserva_espacio_no_encontrado(mock_sesion, mock_espacio_rep
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_crear_reserva_espacio_inactivo(mock_sesion, mock_espacio_repo):
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     datos = CrearReservaRequest(
         espacio_id=1,
         fecha_inicio=now + datetime.timedelta(hours=1),

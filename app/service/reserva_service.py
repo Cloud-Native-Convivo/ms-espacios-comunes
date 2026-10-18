@@ -67,7 +67,7 @@ async def crear(
             "El identificador de usuario no puede estar vacío"
         )
 
-    ahora = datetime.datetime.now()
+    ahora = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     fecha_inicio_cmp = (
         datos.fecha_inicio.replace(tzinfo=None)
         if datos.fecha_inicio.tzinfo

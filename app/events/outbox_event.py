@@ -37,6 +37,7 @@ async def relay_outbox():
                 mensaje = aio_pika.Message(
                     body=evento.carga_util.encode(),
                     content_type="application/json",
+                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                 )
                 await exchange.publish(mensaje, routing_key=evento.tipo_evento)
                 await reserva_repository.marcar_como_procesado(sesion, evento)

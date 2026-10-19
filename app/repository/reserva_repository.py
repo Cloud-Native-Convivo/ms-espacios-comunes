@@ -1,9 +1,10 @@
 import datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.model.modelos import EventoOutbox, Reserva
+from app.util.tiempo import ahora_utc
 
 
 async def existe_solapamiento(
@@ -11,7 +12,13 @@ async def existe_solapamiento(
     espacio_id: int,
     fecha_inicio: datetime.datetime,
     fecha_fin: datetime.datetime,
+    ahora: datetime.datetime | None = None,
 ) -> bool:
+    # func.now() compila a CURRENT_TIMESTAMP en Oracle, que devuelve la hora
+    # en la zona de la SESIÓN (la del cliente que conecta, no UTC) — expira_en
+    # se guarda en UTC (reserva_service.crear), así que la comparación debe
+    # hacerse con la misma base UTC que usa Python, nunca con func.now().
+    ahora = ahora if ahora is not None else ahora_utc()
     consulta = (
         select(Reserva)
         .where(
@@ -21,7 +28,7 @@ async def existe_solapamiento(
                     Reserva.estado == "activa",
                     and_(
                         Reserva.estado == "pendiente_pago",
-                        Reserva.expira_en > func.now(),
+                        Reserva.expira_en > ahora,
                     ),
                 ),
                 Reserva.fecha_inicio < fecha_fin,

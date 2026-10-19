@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -44,7 +45,23 @@ def _mensaje_corrupto(cuerpo_bytes: bytes = b"invalido"):
 @pytest.mark.parametrize("encontrada", [True, False])
 async def test_procesa_mensaje_valido(procesar, cuerpo, funcion_servicio, encontrada):
     sesion = AsyncMock()
-    reserva = MagicMock(id=3) if encontrada else None
+    sesion.get = AsyncMock(return_value=MagicMock(nombre="Espacio"))
+    ahora = datetime.datetime.now()
+    reserva = (
+        MagicMock(
+            id=3,
+            estado="activa",
+            espacio_id=1,
+            usuario_sub="u1",
+            usuario_email=None,
+            fecha_inicio=ahora,
+            fecha_fin=ahora,
+            monto_total=1000.0,
+            expira_en=None,
+        )
+        if encontrada
+        else None
+    )
     with (
         patch.object(consumer, "fabrica_sesiones", _fabrica_con(sesion)),
         patch.object(consumer.reserva_service, funcion_servicio, AsyncMock(return_value=reserva)) as servicio,
@@ -150,3 +167,42 @@ def test_gasto_fallido_request_acepta_camel_case():
     raw_json = '{"reservaId": "42", "motivo": "datos_inconsistentes"}'
     req = GastoFallidoRequest.model_validate_json(raw_json)
     assert req.reserva_id == 42
+
+
+async def test_pago_sobre_reserva_expirada_no_confirma_y_loguea_error(caplog):
+    sesion = AsyncMock()
+    reserva_expirada = MagicMock(id=5, estado="expirada")
+    with (
+        patch.object(consumer, "fabrica_sesiones", _fabrica_con(sesion)),
+        patch.object(consumer.reserva_service, "confirmar_pago", AsyncMock(return_value=reserva_expirada)),
+    ):
+        await consumer.procesar_pago(_mensaje({"reserva_id": 5}))
+    sesion.commit.assert_not_awaited()
+    assert "PAGO SOBRE RESERVA EXPIRADA" in caplog.text
+
+
+async def test_pago_sobre_reserva_activa_agrega_evento_outbox_en_la_misma_sesion():
+    sesion = AsyncMock()
+    espacio = MagicMock(nombre="Quincho")
+    sesion.get = AsyncMock(return_value=espacio)
+    ahora = datetime.datetime.now()
+    reserva_activa = MagicMock(
+        id=7,
+        estado="activa",
+        espacio_id=1,
+        usuario_sub="u1",
+        usuario_email="a@b.cl",
+        fecha_inicio=ahora,
+        fecha_fin=ahora,
+        monto_total=1000.0,
+        expira_en=None,
+    )
+    with (
+        patch.object(consumer, "fabrica_sesiones", _fabrica_con(sesion)),
+        patch.object(consumer.reserva_service, "confirmar_pago", AsyncMock(return_value=reserva_activa)),
+    ):
+        await consumer.procesar_pago(_mensaje({"reserva_id": 7}))
+    sesion.add.assert_called_once()
+    evento_agregado = sesion.add.call_args.args[0]
+    assert evento_agregado.tipo_evento == "reserva_confirmada"
+    sesion.commit.assert_awaited_once()

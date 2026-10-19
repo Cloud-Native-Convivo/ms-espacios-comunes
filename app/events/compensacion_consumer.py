@@ -7,7 +7,9 @@ from tenacity import before_sleep_log, retry, wait_fixed
 from app.config.database import fabrica_sesiones
 from app.config.settings import settings
 from app.dto.esquemas import EventoPagoConfirmadoRequest, GastoFallidoRequest
+from app.model.modelos import Espacio, EventoOutbox
 from app.service import reserva_service
+from app.service.reserva_service import payload_reserva
 
 logger = logging.getLogger(__name__)
 
@@ -71,15 +73,26 @@ async def procesar_pago(mensaje: aio_pika.IncomingMessage):
         async with mensaje.process(requeue=True):
             async with fabrica_sesiones() as sesion:
                 reserva = await reserva_service.confirmar_pago(sesion, datos.reserva_id)
-                if reserva:
+                if reserva is None:
+                    logger.warning(
+                        "Reserva %s no encontrada o no pendiente de pago",
+                        datos.reserva_id,
+                    )
+                elif reserva.estado == "activa":
+                    espacio = await sesion.get(Espacio, reserva.espacio_id)
+                    evt_id = f"reserva-{reserva.id}-confirmada"
+                    sesion.add(EventoOutbox(
+                        tipo_evento="reserva_confirmada",
+                        carga_util=payload_reserva(reserva, espacio, "reserva_confirmada", evt_id),
+                    ))
                     await sesion.commit()
                     logger.info(
                         "Reserva %s confirmada a estado 'activa'", reserva.id
                     )
-                else:
-                    logger.warning(
-                        "Reserva %s no encontrada o no pendiente de pago",
-                        datos.reserva_id,
+                elif reserva.estado == "expirada":
+                    logger.error(
+                        "PAGO SOBRE RESERVA EXPIRADA: reserva %s. Requiere revisión manual.",
+                        reserva.id,
                     )
     except Exception as error_proc:
         logger.exception(

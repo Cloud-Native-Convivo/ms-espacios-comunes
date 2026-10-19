@@ -4,9 +4,9 @@
 #
 #    pip-compile --allow-unsafe --build-deps-for=wheel --generate-hashes --no-emit-index-url --output-file=requirements.txt --strip-extras pyproject.toml
 #
-aio-pika==10.1.0 \
-    --hash=sha256:8dd8aa4514328876e9208970b7dae3a7650afb3373906a2a530286742ebe0f74 \
-    --hash=sha256:ec340bff09d169a367717a4dd822969dac9cc5e835e22a67020e3613784f3139
+aio-pika==10.1.1 \
+    --hash=sha256:4849fa2b6404a3a5ebb1dc07237160e6b5d4323170075bbd43aa7c8df0ed8275 \
+    --hash=sha256:ebb3158982d63a2fbc3dc18b14f70444c328218cdad77a37152f5f98985b653e
     # via ms-espacios-comunes (pyproject.toml)
 aiormq==7.2.1 \
     --hash=sha256:05d55dfbdba0c3854ceb5f118855b0d47fa15fbd08dae1b9c4c0415237c769aa \

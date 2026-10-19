@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +16,17 @@ def _fabrica_con(sesion):
 
 async def test_worker_marca_expiradas_y_propaga_cancelacion_en_espera():
     sesion = AsyncMock()
-    reserva = MagicMock()
+    sesion.get = AsyncMock(return_value=MagicMock(nombre="Espacio"))
+    reserva = MagicMock(
+        id=1,
+        espacio_id=1,
+        usuario_sub="u1",
+        usuario_email=None,
+        fecha_inicio=datetime.datetime.now(),
+        fecha_fin=datetime.datetime.now(),
+        monto_total=1000.0,
+        expira_en=None,
+    )
     with (
         patch("app.events.expiracion_worker.fabrica_sesiones", _fabrica_con(sesion)),
         patch("app.events.expiracion_worker.reserva_repository") as repo,
@@ -46,3 +57,34 @@ async def test_worker_registra_error_y_sigue_en_bucle():
         with pytest.raises(asyncio.CancelledError):
             await worker_expiracion(intervalo_segundos=0)
     fabrica.assert_called_once()
+
+
+async def test_worker_agrega_evento_outbox_reserva_expirada_en_la_misma_sesion():
+    sesion = AsyncMock()
+    espacio = MagicMock(nombre="Quincho")
+    sesion.get = AsyncMock(return_value=espacio)
+    reserva = MagicMock(
+        id=9,
+        espacio_id=1,
+        usuario_sub="u1",
+        usuario_email="a@b.cl",
+        estado="expirada",
+        fecha_inicio=datetime.datetime.now(),
+        fecha_fin=datetime.datetime.now(),
+        monto_total=1000.0,
+        expira_en=None,
+    )
+    with (
+        patch("app.events.expiracion_worker.fabrica_sesiones", _fabrica_con(sesion)),
+        patch("app.events.expiracion_worker.reserva_repository") as repo,
+        patch("app.events.expiracion_worker.asyncio.sleep", AsyncMock(side_effect=asyncio.CancelledError)),
+    ):
+        repo.obtener_expiradas = AsyncMock(return_value=[reserva])
+        repo.marcar_expirada = AsyncMock()
+        with pytest.raises(asyncio.CancelledError):
+            await worker_expiracion(intervalo_segundos=0)
+
+    sesion.add.assert_called_once()
+    evento_agregado = sesion.add.call_args.args[0]
+    assert evento_agregado.tipo_evento == "reserva_expirada"
+    sesion.commit.assert_awaited_once()

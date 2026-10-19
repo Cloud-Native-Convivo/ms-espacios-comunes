@@ -53,6 +53,7 @@ class Reserva(Base):
         Integer, ForeignKey("espacios.id"), nullable=False
     )
     usuario_sub: Mapped[str] = mapped_column(String(255), nullable=False)
+    usuario_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     fecha_inicio: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     fecha_fin: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     estado: Mapped[str] = mapped_column(

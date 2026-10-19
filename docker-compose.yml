@@ -21,6 +21,16 @@ services:
     networks:
       - convivo-network
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - convivo-network
+
   ms-espacios-comunes:
     build: .
     container_name: ms-espacios-comunes
@@ -51,6 +61,9 @@ services:
       PUERTO: 8082
       MODO_DEBUG: "false"
       CONFIG_SERVER_URL: http://config-server:8888
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      MAIL_FROM: no-responder@convivo.cl
     depends_on:
       oracle-espacios:
         condition: service_healthy

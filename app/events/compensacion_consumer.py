@@ -7,7 +7,7 @@ from tenacity import before_sleep_log, retry, wait_fixed
 from app.config.database import fabrica_sesiones
 from app.config.settings import settings
 from app.dto.esquemas import EventoPagoConfirmadoRequest, GastoFallidoRequest
-from app.model.modelos import EventoOutbox, Espacio
+from app.model.modelos import Espacio, EventoOutbox
 from app.service import reserva_service
 from app.service.reserva_service import payload_reserva
 

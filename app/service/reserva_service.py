@@ -11,7 +11,7 @@ from app.exception.reserva_exception import (
     ReservaFechaInvalidaException,
     ReservaSolapamientoException,
 )
-from app.model.modelos import EventoOutbox, Espacio, Reserva
+from app.model.modelos import Espacio, EventoOutbox, Reserva
 from app.repository import espacio_repository, reserva_repository
 from app.util.tiempo import ahora_utc
 

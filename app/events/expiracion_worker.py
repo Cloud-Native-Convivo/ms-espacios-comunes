@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from app.config.database import fabrica_sesiones
-from app.model.modelos import EventoOutbox, Espacio
+from app.model.modelos import Espacio, EventoOutbox
 from app.repository import reserva_repository
 from app.service.reserva_service import payload_reserva
 from app.util.tiempo import ahora_utc

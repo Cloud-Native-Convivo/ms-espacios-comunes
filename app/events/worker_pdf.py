@@ -14,7 +14,10 @@ from app.events.consumidor_notificaciones_base import crear_procesador
 from app.events.correo import enviar_correo
 from app.events.eventos import EventoReserva
 from app.events.pdf_reserva import generar_pdf_reserva
-from app.events.topologia_notificaciones import COLA_PDF, declarar_topologia_notificaciones
+from app.events.topologia_notificaciones import (
+    COLA_PDF,
+    declarar_topologia_notificaciones,
+)
 
 logger = logging.getLogger(__name__)
 NOMBRE_CONSUMIDOR = "pdf_reserva_confirmada"

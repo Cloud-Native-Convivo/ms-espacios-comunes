@@ -27,10 +27,10 @@ WORKDIR /app
 COPY --from=deps /opt/venv /opt/venv
 # El contenedor solo ejecuta uvicorn: se quita pip (del sistema y del venv),
 # que no se usa en runtime y trae CVEs.
-RUN rm -rf /usr/local/lib/python3.12/site-packages/pip /usr/local/lib/python3.12/site-packages/pip-*.dist-info \
-      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12 \
-      /opt/venv/lib/python3.12/site-packages/pip /opt/venv/lib/python3.12/site-packages/pip-*.dist-info \
-      /opt/venv/bin/pip /opt/venv/bin/pip3 /opt/venv/bin/pip3.12
+RUN rm -rf /usr/local/lib/python3.14/site-packages/pip /usr/local/lib/python3.14/site-packages/pip-*.dist-info \
+      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14 \
+      /opt/venv/lib/python3.14/site-packages/pip /opt/venv/lib/python3.14/site-packages/pip-*.dist-info \
+      /opt/venv/bin/pip /opt/venv/bin/pip3 /opt/venv/bin/pip3.14
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini

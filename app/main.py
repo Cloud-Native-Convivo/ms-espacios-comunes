@@ -9,13 +9,17 @@ from py_eureka_client import eureka_client
 from app.api.router import api_router
 from app.config.database import motor
 from app.config.settings import settings
+from app.events.comandos_consumer import consumidor_comandos
 from app.events.compensacion_consumer import consumidor_compensacion
 from app.events.expiracion_worker import worker_expiracion
 from app.events.outbox_event import relay_outbox
+from app.events.worker_notificaciones import consumidor_notificaciones
+from app.events.worker_pdf import consumidor_pdf
 from app.handler.exception_handler import registrar_manejadores_excepciones
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.middleware.security_middleware import SecurityHeadersMiddleware
 from app.model.modelos import Base
+from app.model.solicitud_job import SolicitudJob
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,6 +50,9 @@ async def lifespan(aplicacion: FastAPI):
     tarea_outbox = asyncio.create_task(relay_outbox())
     tarea_compensacion = asyncio.create_task(consumidor_compensacion())
     tarea_expiracion = asyncio.create_task(worker_expiracion())
+    tarea_comandos = asyncio.create_task(consumidor_comandos())
+    tarea_notificaciones = asyncio.create_task(consumidor_notificaciones())
+    tarea_pdf = asyncio.create_task(consumidor_pdf())
     logger.info("Tareas de eventos e expiración iniciadas")
 
     try:
@@ -55,12 +62,19 @@ async def lifespan(aplicacion: FastAPI):
         tarea_outbox.cancel()
         tarea_compensacion.cancel()
         tarea_expiracion.cancel()
+        tarea_comandos.cancel()
+        tarea_notificaciones.cancel()
+        tarea_pdf.cancel()
         await asyncio.gather(
             tarea_outbox,
             tarea_compensacion,
             tarea_expiracion,
+            tarea_comandos,
+            tarea_notificaciones,
+            tarea_pdf,
             return_exceptions=True,
         )
+
         if settings.eureka_url:
             try:
                 await eureka_client.stop_async()

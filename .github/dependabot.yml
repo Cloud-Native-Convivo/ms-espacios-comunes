@@ -15,6 +15,15 @@ updates:
     labels:
       - dependencies
       - python
+    ignore:
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pydantic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sqlalchemy"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uvicorn"
+        update-types: ["version-update:semver-major"]
     groups:
       fastapi-stack:
         patterns:

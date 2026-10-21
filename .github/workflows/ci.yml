@@ -34,9 +34,14 @@ jobs:
       - run: pip install --no-deps --no-build-isolation -e .
       - run: ruff check .
       - run: pytest --junitxml=junit.xml --cov-report=xml
+        env:
+          DB_USERNAME: test_user
+          DB_PASSWORD: test_pass
+          RABBITMQ_USUARIO: test_user
+          RABBITMQ_CONTRASENA: test_pass
       - name: Resultados de tests
         if: always()
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         with:
           report_paths: junit.xml
           check_name: Resultados de tests
@@ -76,11 +81,14 @@ jobs:
       - name: Trivy (informe CRITICAL y HIGH)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # trivy-action v0.36.0 trae Trivy 0.70.0 por defecto; Dependabot no actualiza este valor
+          version: v0.74.0
           image-ref: ms-espacios-comunes:pr
           format: table
           output: trivy.txt
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore
           exit-code: "0"
       - name: Publicar informe en el resumen
         run: |
@@ -93,8 +101,11 @@ jobs:
       - name: Trivy (falla solo con CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # trivy-action v0.36.0 trae Trivy 0.70.0 por defecto; Dependabot no actualiza este valor
+          version: v0.74.0
           image-ref: ms-espacios-comunes:pr
           format: table
           severity: CRITICAL
           ignore-unfixed: true
+          trivyignores: .trivyignore
           exit-code: "1"

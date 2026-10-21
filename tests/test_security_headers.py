@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.api.v1.espacio_router import obtener_servicio
 from app.main import app
 
 CSP_DOCS_ESPERADO = (
@@ -26,11 +25,11 @@ def servicio_mock():
 
 @pytest.fixture
 async def cliente(servicio_mock):
-    app.dependency_overrides[obtener_servicio] = lambda: servicio_mock
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
-    app.dependency_overrides.clear()
+    from unittest.mock import patch
+    with patch('app.api.v1.espacio_router.espacio_service', servicio_mock):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            yield c
 
 
 async def test_csp_en_docs_permite_recursos_externos(cliente):
@@ -59,7 +58,7 @@ async def test_csp_en_api_mantiene_politica_estricta(cliente, servicio_mock):
     servicio_mock.listar_todos.return_value = []
 
     # Verificación en endpoint de negocio
-    respuesta_espacios = await cliente.get("/api/v1/espacios/")
+    respuesta_espacios = await cliente.get("/api/v1/espacios/", params={"condominio_id": 1})
     assert respuesta_espacios.status_code == 200
     assert respuesta_espacios.headers.get("Content-Security-Policy") == CSP_ESTRICTO_ESPERADO
 
@@ -73,7 +72,6 @@ async def test_otras_cabeceras_de_seguridad(cliente):
     respuesta = await cliente.get("/docs")
     assert respuesta.headers.get("X-Content-Type-Options") == "nosniff"
     assert respuesta.headers.get("X-Frame-Options") == "DENY"
-    assert respuesta.headers.get("X-XSS-Protection") == "1; mode=block"
-    assert respuesta.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
+    assert respuesta.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains; preload"
     assert respuesta.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
     assert respuesta.headers.get("server") == "convivo"

@@ -27,6 +27,10 @@ _MAPA_CLAVES = {
     "eureka.url": "EUREKA_URL",
     "eureka.ip": "EUREKA_IP",
     "eureka.port": "EUREKA_PORT",
+    "smtp.host": "SMTP_HOST",
+    "smtp.port": "SMTP_PORT",
+    "smtp.usuario": "SMTP_USUARIO",
+    "smtp.contrasena": "SMTP_CLAVE",
     "modo-debug": "MODO_DEBUG",
     "cors.origins": "CORS_ORIGINS",
 }
@@ -70,20 +74,27 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 1521
     db_name: str = "freepdb1"
-    db_username: str = "admin"
-    db_password: str = "oracle_password"
+    db_username: str
+    db_password: str
 
 
     # --- RabbitMQ ---
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
-    rabbitmq_usuario: str = "guest"
-    rabbitmq_contrasena: str = "guest"
+    rabbitmq_usuario: str
+    rabbitmq_contrasena: str
 
     # --- Eureka ---
-    eureka_url: str = "http://admin:admin123@localhost:8761/eureka/"
+    eureka_url: str | None = None
     eureka_ip: str = "127.0.0.1"
     eureka_port: int = 8082
+
+    # --- SMTP (correo de notificaciones; en local, Mailpit) ---
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    mail_from: str = "no-responder@convivo.cl"
+    smtp_usuario: str = ""
+    smtp_clave: str = ""
 
     # --- Servidor ---
     puerto: int = 8082

@@ -1,10 +1,11 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 # --- Espacios ---
 
 class CrearEspacioRequest(BaseModel):
+    condominio_id: int = Field(..., gt=0)
     nombre: str = Field(..., min_length=1, max_length=100)
     capacidad: int = Field(..., gt=0, le=5000)
     tarifa_hora: float = Field(default=0.0, ge=0.0, le=10_000_000.0)
@@ -28,6 +29,7 @@ class EspacioResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    condominio_id: int
     nombre: str
     descripcion: str | None = None
     capacidad: int
@@ -53,14 +55,14 @@ class CrearReservaRequest(BaseModel):
 
 
 class GastoFallidoRequest(BaseModel):
-    reserva_id: int | None = None
+    reserva_id: int | None = Field(default=None, validation_alias=AliasChoices("reserva_id", "reservaId"))
     usuario_sub: str | None = None
     espacio_id: int | None = None
     fecha_inicio: datetime.datetime | None = None
 
 
 class EventoPagoConfirmadoRequest(BaseModel):
-    reserva_id: int
+    reserva_id: int = Field(..., validation_alias=AliasChoices("reserva_id", "reservaId"))
 
 
 class ReservaResponse(BaseModel):

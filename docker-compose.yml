@@ -6,9 +6,9 @@ services:
     ports:
       - "1521:1521"
     environment:
-      ORACLE_PASSWORD: ${DB_PASSWORD:-oracle_password}
+      ORACLE_PASSWORD: ${DB_PASSWORD}
       APP_USER: ${DB_USERNAME:-admin}
-      APP_USER_PASSWORD: ${DB_PASSWORD:-oracle_password}
+      APP_USER_PASSWORD: ${DB_PASSWORD}
       ORACLE_PDB: freepdb1
     volumes:
       - oracle_data:/opt/oracle/oradata
@@ -18,6 +18,16 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
+    networks:
+      - convivo-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
     networks:
       - convivo-network
 
@@ -39,22 +49,40 @@ services:
       DB_HOST: oracle-espacios
       DB_PORT: 1521
       DB_NAME: freepdb1
-      DB_USERNAME: ${DB_USERNAME:-admin}
-      DB_PASSWORD: ${DB_PASSWORD:-oracle_password}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USUARIO: ${RABBITMQ_USUARIO:-guest}
-      RABBITMQ_CONTRASENA: ${RABBITMQ_CONTRASENA:-guest}
-      EUREKA_URL: http://admin:${EUREKA_PASSWORD:-admin123}@discovery-server:8761/eureka/
+      RABBITMQ_USUARIO: ${RABBITMQ_USUARIO}
+      RABBITMQ_CONTRASENA: ${RABBITMQ_CONTRASENA}
+      EUREKA_URL: ${EUREKA_URL}
       EUREKA_IP: ms-espacios-comunes
       EUREKA_PORT: 8082
       PUERTO: 8082
       MODO_DEBUG: "false"
       CONFIG_SERVER_URL: http://config-server:8888
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      MAIL_FROM: no-responder@convivo.cl
     depends_on:
       oracle-espacios:
         condition: service_healthy
 
+  scanner:
+    image: sonarsource/sonar-scanner-cli:latest
+    container_name: convivo-espacios-scanner
+    profiles:
+      - tools
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - SONAR_HOST_URL=http://sonarqube:9000
+      - SONAR_TOKEN=${SONAR_TOKEN:-}
+    volumes:
+      - ./:/usr/src
+    networks:
+      - convivo-network
 volumes:
   oracle_data:
 
@@ -62,3 +90,4 @@ networks:
   convivo-network:
     external: true
     name: convivo-network
+

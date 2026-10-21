@@ -14,7 +14,7 @@ Plantilla adaptable. Al adaptarla a un proyecto real, sigue estas reglas — no 
 - Comentarios entre paréntesis que son guía-de-relleno se resuelven y desaparecen al aplicar la decisión. Comentarios que explican el PORQUÉ de una regla no son ruido a limpiar — son contenido, se conservan igual que el resto del detalle.
 - Ante la duda entre conservar o borrar: conservar, y marcar `(sin uso actual en este proyecto)` en vez de eliminar. El minimalismo de la sección 6 (Ponytail) rige código nuevo a escribir, no autoriza podar documentación de referencia ya redactada.
 - Sin emojis en código, PR, docs generadas ni output — usar solo como último recurso si no existe alternativa real, nunca como decoración por defecto. En commits rige lo que diga la sección 11: Gitmoji (§11.2) es obligatorio por convención.
-- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo) y a lo ya definido en `ERS.md`/`mvp.md` — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
+- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo). `ERS.md` no existe en este workspace (verificado 2026-10-14) — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
 - Todo en español: funciones, variables, archivos, comentarios, mensajes de error.
 
 ## 0. Jerarquía de reglas
@@ -33,7 +33,7 @@ Roles: residente (reserva), admin (gestiona espacios), conserje (consulta). La v
 
 ## 2. Stack técnico
 
-- Lenguaje: Python 3.11
+- Lenguaje: Python 3.12
 - Framework: FastAPI 0.115+ (con Uvicorn)
 - ORM: SQLAlchemy 2.0 (async) + oracledb (thin mode)
 - Base de datos: Oracle Database Free 23ai (`espacios_db`)
@@ -164,7 +164,7 @@ Niveles: lite / full (defecto) / ultra.
 
 ## 7. Pruebas
 
-Cobertura mínima: 60% de ramas (del EDT) en lógica de servicios y validaciones de reserva. Cubrir camino feliz, camino de error, casos límite.
+Cobertura mínima: 80% de ramas (del EDT) en lógica de servicios y validaciones de reserva. Cubrir camino feliz, camino de error, casos límite.
 
 **Qué cobertura se mide** — el número solo significa algo si se dice de qué tipo es:
 
@@ -182,10 +182,11 @@ Cobertura alta con asserts débiles es cobertura falsa: un test que ejecuta cód
 
 Framework: pytest + pytest-asyncio. Ubicación: `tests/` con estructura espejo del código fuente.
 
-Tests existentes (8/8 pasando):
+Tests existentes (inventario corregido 12/10/2026 — el conteo "8/8" anterior no incluía espacios):
 - `test_reserva_servicio.py`: 3 tests (creación, overlap, espacio inexistente)
 - `test_reserva_rutas.py`: 2 tests (POST /reservas/, GET /reservas/)
 - `test_config_server.py`: 3 tests (esquema no permitido rechazado sin request, config-server caído no lanza excepción, solo completa variables ausentes sin pisar `.env`)
+- `test_espacio_repository.py`, `test_espacio_rutas.py`, `test_espacio_servicio.py`: CRUD de espacios, incluye filtro y ownership por `condominio_id` (multi-tenancy, TD-19)
 
 ```python
 # Ejemplo de test real del proyecto: test de overlap
@@ -244,7 +245,7 @@ Secretos en variables de entorno (`.env` para local, Secrets Manager en prod). N
 - **A03 Fallos de cadena de suministro**: dependencias con lockfile (`requirements.txt` o `pyproject.toml`), sin CVEs conocidos.
 - **A04 Fallos criptográficos**: sin crypto propia, secretos en env vars.
 - **A05 Inyección**: queries parametrizadas siempre (SQLAlchemy ORM), nunca concatenar input de usuario.
-- **A06 Diseño inseguro**: threat model básico cubierto por ERS/MVP (§4.6 Auth dual).
+- **A06 Diseño inseguro**: threat model básico, originalmente cubierto por `ERS.md`/`mvp.md` §4.6 (Auth dual) — ninguno de los dos existe en este workspace (verificado 2026-10-14); ver auth dual real en root `AGENTS.md` §2.
 - **A07 Fallos de autenticación**: delegado al BFF + Cognito/Entra ID. Sin passwords en este servicio.
 - **A08 Fallos de integridad**: sin deserialización de input no confiable más allá de Pydantic.
 - **A09 Fallos de logging**: eventos de seguridad loggeados (intentos no autorizados), sin datos sensibles en log.
@@ -478,7 +479,7 @@ El criterio de fondo: **lo reversible dentro del repo se hace; lo que sale del r
 docker compose up --build
 
 # producción (ECS Fargate via Terraform)
-# ver despliegue-ecs-fargate.md en la raíz del workspace
+# el runbook vivia en despliegue-ecs-fargate.md (raiz del workspace); ese archivo no existe (verificado 2026-10-14), usar terraform-cloud/AGENTS.md como referencia
 cd ../terraform
 terraform plan -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars  # requiere aprobación explícita

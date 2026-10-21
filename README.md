@@ -6,7 +6,7 @@ Microservicio de gestión de espacios comunes y reservas para la plataforma Conv
 
 ## Descripción
 
-`ms-espacios-comunes` es un microservicio del dominio de Convivo (plataforma de gestión de condominios) desarrollado en Python 3.11+ sobre FastAPI. Administra el catálogo de espacios comunes de una comunidad (quinchos, salas de eventos, piscinas, canchas) y procesa el ciclo de vida de las reservas utilizando un flujo Saga en dos fases con bloqueo temporal (TTL de 15 minutos) y tarificación por hora.
+`ms-espacios-comunes` es un microservicio del dominio de Convivo (plataforma de gestión de condominios) desarrollado en Python 3.12 sobre FastAPI. Administra el catálogo de espacios comunes de una comunidad (quinchos, salas de eventos, piscinas, canchas) y procesa el ciclo de vida de las reservas utilizando un flujo Saga en dos fases con bloqueo temporal (TTL de 15 minutos) y tarificación por hora.
 
 ### Arquitectura y Componentes
 - **Framework API**: FastAPI 0.115+ en modo asíncrono gestionado con servidor ASGI Uvicorn.
@@ -155,7 +155,7 @@ El microservicio delega la validación criptográfica de JWT al BFF y consume la
 ### Requisitos Previos
 1. Git instalado.
 2. Docker Engine 24+ y Docker Compose v2+.
-3. Python 3.11 o 3.12 (en caso de ejecución nativa fuera de contenedor).
+3. Python 3.12 (en caso de ejecución nativa fuera de contenedor; los locks `requirements*.txt` se generan para 3.12).
 
 ---
 
@@ -252,20 +252,22 @@ Permite ejecutar el código de FastAPI directamente en la máquina anfitriona mi
 
 ---
 
-### Ejecución de Pruebas Automatizadas
+### Ejecución de Pruebas Automatizadas y Verificación Pre-push
 
-El proyecto cuenta con una suite integral de 31 pruebas unitarias y de integración que cubren validaciones horarias, tarificación, bloqueos pesimistas, tareas en segundo plano y RBAC:
+El microservicio utiliza `pytest` como runner nativo de verificación. Antes de realizar `git push` o abrir un Pull Request, ejecutar las validaciones locales:
 
 ```bash
-# Ejecutar todas las pruebas con salida detallada
+# 1. Ejecutar suite completa (incluye pruebas unitarias, integración y validación Gitmoji)
 pytest tests/ -v
 
-# Ejecutar una suite específica
-pytest tests/test_reserva_rutas.py -v
+# 2. Validar únicamente la convención de commits Gitmoji
+pytest tests/test_git_commit_convention.py -v
 
-# Validar formato y calidad de código con Ruff
+# 3. Validar calidad de código y estilo con Ruff
 ruff check .
 ```
+
+> **Nota de CI**: `tests/test_git_commit_convention.py` asegura que cualquier mensaje de commit respete la sintaxis Gitmoji + Conventional Commits (`pr-quality.yml`) antes de que el trabajo llegue a GitHub Actions.
 
 ---
 

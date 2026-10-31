@@ -14,7 +14,7 @@ Plantilla adaptable. Al adaptarla a un proyecto real, sigue estas reglas — no 
 - Comentarios entre paréntesis que son guía-de-relleno se resuelven y desaparecen al aplicar la decisión. Comentarios que explican el PORQUÉ de una regla no son ruido a limpiar — son contenido, se conservan igual que el resto del detalle.
 - Ante la duda entre conservar o borrar: conservar, y marcar `(sin uso actual en este proyecto)` en vez de eliminar. El minimalismo de la sección 6 (Ponytail) rige código nuevo a escribir, no autoriza podar documentación de referencia ya redactada.
 - Sin emojis en código, PR, docs generadas ni output — usar solo como último recurso si no existe alternativa real, nunca como decoración por defecto. En commits rige lo que diga la sección 11: Gitmoji (§11.2) es obligatorio por convención.
-- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo). `ERS.md` no existe en este workspace (verificado 2026-10-14) — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
+- Nada de solución genérica de tutorial. Cada decisión responde al proyecto real (Convivo) y a su arquitectura de referencia — no copiar boilerplate ni reciclar un patrón sin pensar el caso de uso concreto.
 - Todo en español: funciones, variables, archivos, comentarios, mensajes de error.
 
 ## 0. Jerarquía de reglas
@@ -245,7 +245,7 @@ Secretos en variables de entorno (`.env` para local, Secrets Manager en prod). N
 - **A03 Fallos de cadena de suministro**: dependencias con lockfile (`requirements.txt` o `pyproject.toml`), sin CVEs conocidos.
 - **A04 Fallos criptográficos**: sin crypto propia, secretos en env vars.
 - **A05 Inyección**: queries parametrizadas siempre (SQLAlchemy ORM), nunca concatenar input de usuario.
-- **A06 Diseño inseguro**: threat model básico, originalmente cubierto por `ERS.md`/`mvp.md` §4.6 (Auth dual) — ninguno de los dos existe en este workspace (verificado 2026-10-14); ver auth dual real en root `AGENTS.md` §2.
+- **A06 Diseño inseguro**: threat model básico, cubierto por el auth dual documentado en root `AGENTS.md` §2.
 - **A07 Fallos de autenticación**: delegado al BFF + Cognito/Entra ID. Sin passwords en este servicio.
 - **A08 Fallos de integridad**: sin deserialización de input no confiable más allá de Pydantic.
 - **A09 Fallos de logging**: eventos de seguridad loggeados (intentos no autorizados), sin datos sensibles en log.
@@ -479,7 +479,7 @@ El criterio de fondo: **lo reversible dentro del repo se hace; lo que sale del r
 docker compose up --build
 
 # producción (ECS Fargate via Terraform)
-# el runbook vivia en despliegue-ecs-fargate.md (raiz del workspace); ese archivo no existe (verificado 2026-10-14), usar terraform-cloud/AGENTS.md como referencia
+# runbook de despliegue en terraform-cloud/AGENTS.md
 cd ../terraform
 terraform plan -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars  # requiere aprobación explícita
@@ -564,7 +564,7 @@ Protege la información sensible que el software procesa. Acá va el control imp
 | A.8.5 | Autenticación segura | delegada al BFF + Cognito/Entra ID (§10 A07); sin passwords locales |
 | A.8.8 | Gestión de vulnerabilidades técnicas | lockfile committeado, escaneo de dependencias Python sin CVEs conocidos |
 | A.8.9 | Gestión de configuración | `settings.py` con Pydantic Settings, sin defaults inseguros en producción |
-| A.8.10 / A.8.11 | Eliminación de información / Enmascaramiento | política de cancelación y retención de reservas según ERS |
+| A.8.10 / A.8.11 | Eliminación de información / Enmascaramiento | política de cancelación y retención de reservas según los requisitos del proyecto |
 | A.8.12 | Prevención de fuga de datos | secretos y datos personales fuera de logs y mensajes de excepción (§10 A10) |
 | A.8.13 | Respaldo de la información | respaldos administrados de la base de datos Oracle |
 | A.8.15 / A.8.16 | Registro / Actividades de monitoreo | middleware de logging de peticiones, eventos Outbox con estados registrados |

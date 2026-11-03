@@ -74,3 +74,6 @@ desktop.ini
 .claude/
 .codegraph/
 skills-lock.json
+
+# Memoria local de projectmem (por persona, no se versiona)
+.projectmem/

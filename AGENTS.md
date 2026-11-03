@@ -422,7 +422,9 @@ git checkout develop && git pull origin develop
 - Nunca rebase de una rama ya pusheada que otros puedan tener checkout local.
 - Nunca borrar `release/*`/`hotfix/*` sin haber mergeado a ambos destinos.
 
-**Branch protection / PR:** `main` y `develop` protegidas, requieren PR, sin review obligatorio (equipo de dos personas: a menudo no hay otra persona que apruebe), checks de CI en verde obligatorios.
+**Branch protection / PR:** `main` y `develop` protegidas, requieren PR, sin review obligatorio (equipo de dos personas: a menudo no hay otra persona que apruebe), con la rama al día (`strict`) y conversaciones resueltas; ni los administradores pueden saltarse las reglas (`enforce_admins`) y no hay force push ni borrado; checks de CI en verde obligatorios.
+
+**Checks obligatorios de este repo** (estado verificado el 2026-11-03): en `develop`, `test`; en `main`, los mismos y además `pr-title`, `dependency-review`, `workflow-lint`, `Analyze (python)`, `Analyze (actions)`. El auto-merge está permitido: Dependabot lo activa con squash solo para parches y versiones menores (`.github/workflows/dependabot-auto.yml`) y los saltos de versión mayor se mergean a mano. Detalle y comparación con los demás repos: `AGENTS.md` raíz del workspace, §11.3.
 
 **Advertencia del autor (Driessen 2020):** Git Flow fue concebido para software con versionado explícito. Este proyecto versiona con semver y Docker tags, por lo que adopta Git Flow full conscientemente.
 

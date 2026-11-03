@@ -422,7 +422,7 @@ git checkout develop && git pull origin develop
 - Nunca rebase de una rama ya pusheada que otros puedan tener checkout local.
 - Nunca borrar `release/*`/`hotfix/*` sin haber mergeado a ambos destinos.
 
-**Branch protection / PR:** `main` y `develop` protegidas, requieren PR + review, checks de CI en verde obligatorios.
+**Branch protection / PR:** `main` y `develop` protegidas, requieren PR, sin review obligatorio (equipo de dos personas: a menudo no hay otra persona que apruebe), checks de CI en verde obligatorios.
 
 **Advertencia del autor (Driessen 2020):** Git Flow fue concebido para software con versionado explícito. Este proyecto versiona con semver y Docker tags, por lo que adopta Git Flow full conscientemente.
 

@@ -56,6 +56,20 @@ def test_completa_solo_variables_ausentes(monkeypatch):
     assert os.environ["PUERTO"] == "9999"  # completa la ausente
 
 
+def test_descarta_valores_con_placeholder_sin_resolver(monkeypatch):
+    monkeypatch.delenv("RABBITMQ_USUARIO", raising=False)
+    respuesta = Mock()
+    respuesta.raise_for_status = Mock()
+    respuesta.json.return_value = {
+        "propertySources": [{"source": {"rabbitmq.usuario": "${RABBITMQ_USER:guest}"}}]
+    }
+    monkeypatch.setattr("app.config.settings.httpx.get", Mock(return_value=respuesta))
+
+    cargar_configuracion_remota(url_base="http://localhost:8888")
+
+    assert "RABBITMQ_USUARIO" not in os.environ
+
+
 def test_parsear_cors_origins_desde_string(monkeypatch):
     from app.config.settings import Settings
 

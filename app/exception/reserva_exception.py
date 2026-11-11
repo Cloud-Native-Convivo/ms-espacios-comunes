@@ -32,3 +32,19 @@ class ReservaEspacioNoDisponibleException(ReservaException):
             f"El espacio {espacio_id} no está disponible para reservas (estado: {estado})"
         )
 
+
+
+class ReservaNoEncontradaException(ReservaException):
+    """Se lanza cuando la reserva no existe."""
+
+    def __init__(self, reserva_id: int):
+        self.reserva_id = reserva_id
+        super().__init__(f"Reserva {reserva_id} no encontrada")
+
+
+class ReservaNoAutorizadaException(ReservaException):
+    """Se lanza cuando un residente intenta operar una reserva ajena."""
+
+    def __init__(self, reserva_id: int):
+        self.reserva_id = reserva_id
+        super().__init__("No autorizado para cancelar esta reserva")

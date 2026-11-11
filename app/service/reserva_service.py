@@ -9,6 +9,8 @@ from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
     ReservaEspacioNoDisponibleException,
     ReservaFechaInvalidaException,
+    ReservaNoAutorizadaException,
+    ReservaNoEncontradaException,
     ReservaSolapamientoException,
 )
 from app.model.modelos import Espacio, EventoOutbox, Reserva
@@ -68,19 +70,16 @@ async def crear(
             "El identificador de usuario no puede estar vacío"
         )
 
-    # Hora local, sin cambios respecto al comportamiento anterior: solo se usa
-    # para validar fecha_inicio/fecha_fin (nunca se guardan ni se devuelven
-    # distinto). El UTC queda acotado a expira_en (ver más abajo), que es lo
-    # único que compara expiracion_worker.py.
-    ahora = datetime.datetime.now()
-    fecha_inicio_cmp = (
-        datos.fecha_inicio.replace(tzinfo=None)
-        if datos.fecha_inicio.tzinfo
-        else datos.fecha_inicio
-    )
-    fecha_fin_cmp = (
-        datos.fecha_fin.replace(tzinfo=None) if datos.fecha_fin.tzinfo else datos.fecha_fin
-    )
+    # Todo se compara en UTC naive (misma base que ahora_utc() y las columnas):
+    # un datetime con zona se convierte a UTC; uno sin zona se asume ya en UTC.
+    def _a_utc_naive(valor: datetime.datetime) -> datetime.datetime:
+        if valor.tzinfo is None:
+            return valor
+        return valor.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+
+    ahora = ahora_utc()
+    fecha_inicio_cmp = _a_utc_naive(datos.fecha_inicio)
+    fecha_fin_cmp = _a_utc_naive(datos.fecha_fin)
 
     if fecha_inicio_cmp < ahora:
         raise ReservaFechaInvalidaException(
@@ -165,6 +164,17 @@ async def confirmar_pago(sesion: AsyncSession, reserva_id: int) -> Reserva | Non
 
 async def cancelar_por_id(sesion: AsyncSession, reserva_id: int) -> Reserva | None:
     return await reserva_repository.cancelar_por_id(sesion, reserva_id)
+
+async def cancelar_con_dueno(
+    sesion: AsyncSession, reserva_id: int, usuario_sub: str, privilegiado: bool
+) -> Reserva:
+    """Cancela validando existencia y dueño (admin/conserje cancelan cualquiera)."""
+    reserva = await reserva_repository.obtener_por_id(sesion, reserva_id)
+    if not reserva:
+        raise ReservaNoEncontradaException(reserva_id)
+    if not privilegiado and reserva.usuario_sub != usuario_sub:
+        raise ReservaNoAutorizadaException(reserva_id)
+    return await reserva_repository.cancelar_por_id(sesion, reserva_id) or reserva
 
 async def compensar_por_gasto_fallido(
     sesion: AsyncSession,

@@ -8,9 +8,9 @@ aio-pika==10.2.2 \
     --hash=sha256:578a12b71c1d8bd4ca526f413dfc17f9224b9d5176c2edc778eaf9de90857a1e \
     --hash=sha256:80db36df038cc183c8e7e2f75c5991af6e0ad6a7a5c2e5c9a81d6bdde5488621
     # via ms-espacios-comunes (pyproject.toml)
-aiormq==7.2.4 \
-    --hash=sha256:2b9d6dade171318185ab8f507717b630f20b8b2303a075f9293d3f6b0d166f1d \
-    --hash=sha256:5fd20bb9583d73de85572198496b65cf028f27527c1733c9840d458e0b40e8fa
+aiormq==7.2.5 \
+    --hash=sha256:250dc99381c004e0b9c3a58a38b0fc04564339aa1e05740fcf3a9578fe810fc2 \
+    --hash=sha256:c408686d190d10788ca132899c5ede6b123541bee2ce54ea7167404fac11d779
     # via aio-pika
 aiosqlite==0.22.1 \
     --hash=sha256:21c002eb13823fad740196c5a2e9d8e62f6243bd9e7e4a1f87fb5e44ecb4fceb \

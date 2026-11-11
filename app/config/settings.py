@@ -60,7 +60,8 @@ def cargar_configuracion_remota(url_base: str = CONFIG_SERVER_URL) -> None:
     for fuente in respuesta.json().get("propertySources", []):
         for clave, valor in fuente.get("source", {}).items():
             variable = _MAPA_CLAVES.get(clave)
-            if variable and variable not in os.environ:
+            # Spring Cloud Config no resuelve ${...}: un valor así llegaría literal, se descarta.
+            if variable and variable not in os.environ and "${" not in str(valor):
                 os.environ[variable] = str(valor)
 
 

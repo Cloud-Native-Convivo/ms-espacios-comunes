@@ -17,6 +17,8 @@ from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
     ReservaEspacioNoDisponibleException,
     ReservaFechaInvalidaException,
+    ReservaNoAutorizadaException,
+    ReservaNoEncontradaException,
     ReservaSolapamientoException,
 )
 from app.model.solicitud_job import SolicitudJob
@@ -28,6 +30,9 @@ logger = logging.getLogger(__name__)
 COLA_COMANDOS = "espacios_comandos_queue"
 COLA_COMANDOS_DLQ = "espacios_comandos_dlq"
 EXCHANGE_DLX = "espacios_dlx"
+
+
+ROLES_PRIVILEGIADOS = {"admin", "administrador", "conserje"}
 
 
 def _id_positivo(comando: dict, campo: str) -> int:
@@ -59,12 +64,13 @@ async def _ejecutar_accion(sesion, comando: dict) -> dict:
             "monto_total": float(getattr(reserva, "monto_total", 0.0) or 0.0),
         }
     if accion == "CANCELAR_RESERVA":
-        reserva_id = int(payload.get("reserva_id", 0))
-        reserva = await reserva_service.cancelar_por_id(sesion, reserva_id)
-        return {
-            "id": getattr(reserva, "id", None) if reserva else reserva_id,
-            "estado": getattr(reserva, "estado", "cancelada") if reserva else "cancelada",
-        }
+        reserva_id = _id_positivo(payload, "reserva_id")
+        # `rol` trae solo el primer rol del token (lo arma el bff).
+        privilegiado = str(comando.get("rol", "")).lower() in ROLES_PRIVILEGIADOS
+        reserva = await reserva_service.cancelar_con_dueno(
+            sesion, reserva_id, comando.get("usuario_id", ""), privilegiado
+        )
+        return {"id": reserva.id, "estado": reserva.estado}
     if accion == "CREAR_ESPACIO":
         # El condominio del comando (lo fija el bff) manda sobre el del payload.
         if comando.get("condominio_id") is not None:
@@ -112,8 +118,10 @@ def _describir_error(exc: Exception) -> dict:
         ),
     ):
         return {"codigo": "VALIDACION_NEGOCIO", "mensaje": str(exc), "status_code": 400}
-    if isinstance(exc, EspacioNoEncontradoException):
+    if isinstance(exc, (EspacioNoEncontradoException, ReservaNoEncontradaException)):
         return {"codigo": "NO_ENCONTRADO", "mensaje": str(exc), "status_code": 404}
+    if isinstance(exc, ReservaNoAutorizadaException):
+        return {"codigo": "NO_AUTORIZADO", "mensaje": str(exc), "status_code": 403}
     return {
         "codigo": "ERROR_INTERNO",
         "mensaje": "Error interno al procesar la solicitud",

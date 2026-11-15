@@ -64,7 +64,9 @@ async def _ejecutar_accion(sesion, comando: dict) -> dict:
             "monto_total": float(getattr(reserva, "monto_total", 0.0) or 0.0),
         }
     if accion == "CANCELAR_RESERVA":
-        reserva_id = _id_positivo(payload, "reserva_id")
+        # El bff lo envia de primer nivel (tomado de la ruta, como espacio_id);
+        # el payload queda de respaldo para comandos encolados antes de ese cambio.
+        reserva_id = _id_positivo(comando if "reserva_id" in comando else payload, "reserva_id")
         # `rol` trae solo el primer rol del token (lo arma el bff).
         privilegiado = str(comando.get("rol", "")).lower() in ROLES_PRIVILEGIADOS
         reserva = await reserva_service.cancelar_con_dueno(

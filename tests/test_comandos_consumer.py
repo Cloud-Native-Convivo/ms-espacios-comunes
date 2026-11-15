@@ -100,13 +100,15 @@ async def test_procesar_comando_crear_reserva_propaga_usuario_email(mock_sesion)
 
 
 def _comando_cancelar(usuario_id="user-1", rol="residente", reserva_id=5):
+    # Forma real del bff: reserva_id de primer nivel y body vacio en el payload.
     return {
         "ticket_id": "ticket-789",
         "modulo": "ESPACIOS",
         "accion": "CANCELAR_RESERVA",
         "usuario_id": usuario_id,
         "rol": rol,
-        "payload": {"reserva_id": reserva_id},
+        "reserva_id": reserva_id,
+        "payload": {},
     }
 
 
@@ -140,6 +142,29 @@ async def test_procesar_comando_cancelar_reserva_propia(mock_sesion):
         await procesar_comando_mutacion(mock_sesion, _comando_cancelar())
     assert reserva.estado == "cancelada"
     mock_sesion.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cancelar_reserva_acepta_reserva_id_en_payload_como_respaldo(mock_sesion):
+    p_get, p_cancel, reserva = _repo_con_reserva(dueno="user-1")
+    comando = _comando_cancelar()
+    del comando["reserva_id"]
+    comando["payload"] = {"reserva_id": 5}
+    with p_get, p_cancel:
+        await procesar_comando_mutacion(mock_sesion, comando)
+    assert reserva.estado == "cancelada"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reserva_id", [None, 0, "5", True])
+async def test_cancelar_reserva_con_id_invalido_queda_fallido_400(mock_sesion, reserva_id):
+    with patch(
+        "app.events.comandos_consumer.job_repository.actualizar_estado_job", new=AsyncMock()
+    ) as actualizar:
+        await procesar_comando_mutacion(mock_sesion, _comando_cancelar(reserva_id=reserva_id))
+    kwargs = actualizar.await_args.kwargs
+    assert kwargs["estado"] == "FALLIDO"
+    assert json.loads(kwargs["error"])["status_code"] == 400
 
 
 @pytest.mark.asyncio

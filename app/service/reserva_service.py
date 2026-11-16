@@ -48,7 +48,11 @@ def payload_reserva(
             "usuario_sub": reserva.usuario_sub,
             "usuarioSub": reserva.usuario_sub,
             "email": reserva.usuario_email or "",
-            "concepto": f"Reserva Espacio {reserva.espacio_id}",
+            # Es el concepto del gasto que ve el residente (comprobante PDF): debe distinguir una reserva de otra.
+            "concepto": (
+                f"Reserva {espacio_nombre} el {reserva.fecha_inicio:%d/%m/%Y} "
+                f"a las {reserva.fecha_inicio:%H:%M}"
+            ),
             "monto": float(reserva.monto_total),
             "monto_total": float(reserva.monto_total),
             "fecha_inicio": reserva.fecha_inicio.isoformat(),

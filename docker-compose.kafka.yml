@@ -1,0 +1,163 @@
+# Cluster Kafka local de espacios comunes (EP5, tarjeta Trello #58).
+#   docker compose -f docker-compose.kafka.yml up -d
+# 3 ZooKeeper + 3 brokers (Confluent 7.x, última línea con ZooKeeper), kafka-init
+# crea los tópicos y kafbat/kafka-ui los muestra en http://127.0.0.1:8090.
+# Dentro de cloud-native_backend-network: kafka-1:29092,kafka-2:29092,kafka-3:29092.
+# Desde el host: 127.0.0.1:9092-9094. Sin volúmenes: `down` borra los datos y
+# kafka-init vuelve a crear los tópicos en el siguiente `up`.
+# Nota: PLAINTEXT sin auth, solo para local (puertos atados a 127.0.0.1);
+# un despliegue real necesita SASL/TLS o un servicio administrado (MSK).
+
+x-zookeeper: &zookeeper
+  image: confluentinc/cp-zookeeper:7.9.2
+  restart: unless-stopped
+  mem_limit: 128m
+  networks: [backend]
+  healthcheck:
+    test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/2181 && echo ruok >&3 && grep -q imok <&3"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+
+x-zookeeper-env: &zookeeper-env
+  ZOOKEEPER_CLIENT_PORT: 2181
+  ZOOKEEPER_TICK_TIME: 2000
+  ZOOKEEPER_INIT_LIMIT: 5
+  ZOOKEEPER_SYNC_LIMIT: 2
+  ZOOKEEPER_SERVERS: zookeeper-1:2888:3888;zookeeper-2:2888:3888;zookeeper-3:2888:3888
+  KAFKA_HEAP_OPTS: -Xms64m -Xmx64m
+  KAFKA_OPTS: -Dzookeeper.4lw.commands.whitelist=ruok
+
+x-kafka: &kafka
+  image: confluentinc/cp-kafka:7.9.2
+  restart: unless-stopped
+  # Medido: el broker necesita >128m de heap para arrancar (OutOfMemoryError con
+  # 128m) y ~100m fuera del heap (metaspace, threads, buffers); con 256m/160m lo
+  # mataba el OOM killer. 384m con heap 192m es el mínimo estable.
+  # No correr CLIs con `docker exec` aquí: otra JVM revienta el límite; usar `docker run --rm --network cloud-native_backend-network cp-kafka ...`.
+  mem_limit: 384m
+  networks: [backend]
+  depends_on:
+    zookeeper-1: { condition: service_healthy }
+    zookeeper-2: { condition: service_healthy }
+    zookeeper-3: { condition: service_healthy }
+  healthcheck:
+    # Chequeo de puerto con bash: un kafka-broker-api-versions levantaría otra JVM
+    # dentro del mismo mem_limit.
+    test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/29092"]
+    interval: 10s
+    timeout: 5s
+    retries: 15
+    start_period: 20s
+
+x-kafka-env: &kafka-env
+  KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_HEAP_OPTS: -Xms192m -Xmx192m
+
+services:
+  zookeeper-1:
+    <<: *zookeeper
+    container_name: zookeeper-1
+    environment: { <<: *zookeeper-env, ZOOKEEPER_SERVER_ID: 1 }
+
+  zookeeper-2:
+    <<: *zookeeper
+    container_name: zookeeper-2
+    environment: { <<: *zookeeper-env, ZOOKEEPER_SERVER_ID: 2 }
+
+  zookeeper-3:
+    <<: *zookeeper
+    container_name: zookeeper-3
+    environment: { <<: *zookeeper-env, ZOOKEEPER_SERVER_ID: 3 }
+
+  kafka-1:
+    <<: *kafka
+    container_name: kafka-1
+    ports: ["127.0.0.1:9092:9092"]
+    environment:
+      <<: *kafka-env
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
+
+  kafka-2:
+    <<: *kafka
+    container_name: kafka-2
+    ports: ["127.0.0.1:9093:9093"]
+    environment:
+      <<: *kafka-env
+      KAFKA_BROKER_ID: 2
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:29092,EXTERNAL://localhost:9093
+
+  kafka-3:
+    <<: *kafka
+    container_name: kafka-3
+    ports: ["127.0.0.1:9094:9094"]
+    environment:
+      <<: *kafka-env
+      KAFKA_BROKER_ID: 3
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:29092,EXTERNAL://localhost:9094
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.9.2
+    container_name: kafka-init
+    restart: "no"
+    mem_limit: 256m
+    networks: [backend]
+    depends_on:
+      kafka-1: { condition: service_healthy }
+      kafka-2: { condition: service_healthy }
+      kafka-3: { condition: service_healthy }
+    environment:
+      KAFKA_HEAP_OPTS: -Xms64m -Xmx128m
+    # --if-not-exists no toca un tópico ya creado; kafka-configs --alter reaplica
+    # las configs para que un cambio aquí llegue también a tópicos existentes.
+    entrypoint: ["bash", "-ec"]
+    command:
+      - |
+        BS=kafka-1:29092,kafka-2:29092,kafka-3:29092
+        cub kafka-ready -b "$$BS" 3 120
+        crear() {
+          kafka-topics --bootstrap-server "$$BS" --create --if-not-exists \
+            --topic "$$1" --partitions 3 --replication-factor 3
+          kafka-configs --bootstrap-server "$$BS" --alter --entity-type topics \
+            --entity-name "$$1" \
+            --add-config "min.insync.replicas=2,cleanup.policy=delete,retention.ms=$$2"
+        }
+        crear espacios.historial.v1 7776000000
+        crear espacios.alertas.v1 604800000
+        kafka-topics --bootstrap-server "$$BS" --describe --exclude-internal
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.3.0
+    container_name: kafka-ui
+    restart: unless-stopped
+    # Medido: ~245m en reposo con heap 128m (Spring Boot); 192m/256m sin margen.
+    mem_limit: 320m
+    networks: [backend]
+    ports: ["127.0.0.1:8090:8080"]
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+    environment:
+      KAFKA_CLUSTERS_0_NAME: convivo-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+      DYNAMIC_CONFIG_ENABLED: "false"
+      JAVA_OPTS: -Xms64m -Xmx128m
+
+# Red backend del docker-compose.yml de la raíz del workspace (proyecto
+# "cloud-native"), donde corren ms-espacios-comunes y ms-condominios. Levantar
+# primero ese compose: si la red no existe, este `up` falla.
+networks:
+  backend:
+    external: true
+    name: cloud-native_backend-network

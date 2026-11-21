@@ -24,6 +24,7 @@ _MAPA_CLAVES = {
     "rabbitmq.port": "RABBITMQ_PORT",
     "rabbitmq.usuario": "RABBITMQ_USUARIO",
     "rabbitmq.contrasena": "RABBITMQ_CONTRASENA",
+    "kafka.bootstrap-servers": "KAFKA_BOOTSTRAP_SERVERS",
     "eureka.url": "EUREKA_URL",
     "eureka.ip": "EUREKA_IP",
     "eureka.port": "EUREKA_PORT",
@@ -84,6 +85,10 @@ class Settings(BaseSettings):
     rabbitmq_port: int = 5672
     rabbitmq_usuario: str
     rabbitmq_contrasena: str
+
+    # --- Kafka (docker-compose.kafka.yml; en red interna kafka-1:29092,...) ---
+    kafka_bootstrap_servers: str = "localhost:9092,localhost:9093,localhost:9094"
+    kafka_client_id: str = "ms-espacios-comunes"
 
     # --- Eureka ---
     eureka_url: str | None = None

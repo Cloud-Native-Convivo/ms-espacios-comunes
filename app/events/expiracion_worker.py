@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from app.config.database import fabrica_sesiones
+from app.events import kafka_outbox
 from app.model.modelos import Espacio, EventoOutbox
 from app.repository import reserva_repository
 from app.service.reserva_service import payload_reserva
@@ -27,6 +28,10 @@ async def worker_expiracion(intervalo_segundos: int = 60) -> None:
                             tipo_evento="reserva_expirada",
                             carga_util=payload_reserva(reserva, espacio, "reserva_expirada", evt_id),
                         ))
+                        await kafka_outbox.registrar_evento_reserva(
+                            sesion, "RESERVA_EXPIRADA", reserva,
+                            estado_anterior="pendiente_pago", espacio=espacio,
+                        )
                     await sesion.commit()
                     logger.info("Worker expiración: %d reservas marcadas como expiradas", len(expiradas))
         except asyncio.CancelledError:

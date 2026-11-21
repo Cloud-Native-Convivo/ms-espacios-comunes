@@ -77,7 +77,9 @@ async def _ejecutar_accion(sesion, comando: dict) -> dict:
         # El condominio del comando (lo fija el bff) manda sobre el del payload.
         if comando.get("condominio_id") is not None:
             payload = {**payload, "condominio_id": comando["condominio_id"]}
-        espacio = await espacio_service.crear(sesion, CrearEspacioRequest(**payload))
+        espacio = await espacio_service.crear(
+            sesion, CrearEspacioRequest(**payload), actor_sub=comando.get("usuario_id")
+        )
         return {
             "id": getattr(espacio, "id", None),
             "nombre": getattr(espacio, "nombre", None),
@@ -87,7 +89,8 @@ async def _ejecutar_accion(sesion, comando: dict) -> dict:
         espacio_id = _id_positivo(comando, "espacio_id")
         condominio_id = _id_positivo(comando, "condominio_id")
         espacio = await espacio_service.actualizar(
-            sesion, espacio_id, condominio_id, ActualizarEspacioRequest(**payload)
+            sesion, espacio_id, condominio_id, ActualizarEspacioRequest(**payload),
+            actor_sub=comando.get("usuario_id"),
         )
         return {
             "id": getattr(espacio, "id", None),
@@ -97,7 +100,9 @@ async def _ejecutar_accion(sesion, comando: dict) -> dict:
         espacio_id = _id_positivo(comando, "espacio_id")
         condominio_id = _id_positivo(comando, "condominio_id")
         # El servicio inactiva el espacio si tiene reservas en vez de borrarlo.
-        desenlace = await espacio_service.eliminar(sesion, espacio_id, condominio_id)
+        desenlace = await espacio_service.eliminar(
+            sesion, espacio_id, condominio_id, actor_sub=comando.get("usuario_id")
+        )
         return {
             "espacio_id": espacio_id,
             "eliminado": desenlace == "eliminado",

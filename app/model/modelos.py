@@ -80,3 +80,21 @@ class EventoOutbox(Base):
     creado_en: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
+
+
+class EventoOutboxKafka(Base):
+    """Outbox propio de Kafka: separado de eventos_outbox (RabbitMQ) para que
+    cada broker reintente por su cuenta y una caída de uno no frene al otro."""
+
+    __tablename__ = "eventos_outbox_kafka"
+    __table_args__ = (Index("ix_eventos_outbox_kafka_procesado", "procesado", "id"),)
+
+    id: Mapped[int] = mapped_column(Integer, Identity(start=1), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)
+    topico: Mapped[str] = mapped_column(String(100), nullable=False)
+    clave: Mapped[str] = mapped_column(String(100), nullable=False)
+    carga_util: Mapped[str] = mapped_column(Text, nullable=False)
+    procesado: Mapped[bool] = mapped_column(default=False)
+    creado_en: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )

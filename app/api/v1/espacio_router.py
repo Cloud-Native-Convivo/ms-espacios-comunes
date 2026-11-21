@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import obtener_sesion
@@ -38,9 +38,10 @@ async def obtener_espacio(
 )
 async def crear_espacio(
     datos: CrearEspacioRequest,
+    x_usuario_sub: str | None = Header(default=None),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> EspacioResponse:
-    return await espacio_service.crear(sesion, datos)
+    return await espacio_service.crear(sesion, datos, actor_sub=x_usuario_sub)
 
 @router.put(
     "/{espacio_id}",
@@ -50,9 +51,12 @@ async def actualizar_espacio(
     espacio_id: int,
     datos: ActualizarEspacioRequest,
     condominio_id: int = Query(..., gt=0),
+    x_usuario_sub: str | None = Header(default=None),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> EspacioResponse:
-    return await espacio_service.actualizar(sesion, espacio_id, condominio_id, datos)
+    return await espacio_service.actualizar(
+        sesion, espacio_id, condominio_id, datos, actor_sub=x_usuario_sub
+    )
 
 @router.delete(
     "/{espacio_id}",
@@ -62,7 +66,8 @@ async def actualizar_espacio(
 async def eliminar_espacio(
     espacio_id: int,
     condominio_id: int = Query(..., gt=0),
+    x_usuario_sub: str | None = Header(default=None),
     sesion: AsyncSession = Depends(obtener_sesion),
 ) -> None:
-    await espacio_service.eliminar(sesion, espacio_id, condominio_id)
+    await espacio_service.eliminar(sesion, espacio_id, condominio_id, actor_sub=x_usuario_sub)
     return None

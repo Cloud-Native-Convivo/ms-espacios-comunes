@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dto.esquemas import CrearReservaRequest
+from app.events import kafka_outbox
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.exception.reserva_exception import (
     ReservaEspacioNoDisponibleException,
@@ -151,6 +152,9 @@ async def crear(
     # `reserva_creada`, para no depender de que el valor de retorno conserve
     # los mismos campos (un mock de test puede sustituirlo por otro objeto).
     evento.carga_util = payload_reserva(reserva, espacio, "reserva_espacio_creada", evt_id)
+    await kafka_outbox.registrar_evento_reserva(
+        sesion, "RESERVA_CREADA", reserva, actor_sub=usuario_sub, espacio=espacio
+    )
     return reserva_creada
 
 async def listar_por_usuario(sesion: AsyncSession, usuario_sub: str) -> list[Reserva]:
@@ -164,10 +168,29 @@ async def listar_todas(sesion: AsyncSession) -> list[Reserva]:
     return await reserva_repository.obtener_todas(sesion)
 
 async def confirmar_pago(sesion: AsyncSession, reserva_id: int) -> Reserva | None:
-    return await reserva_repository.confirmar_pago(sesion, reserva_id)
+    """Pasa la reserva a 'activa' si estaba pendiente; solo esa transición genera evento."""
+    reserva = await reserva_repository.obtener_por_id(sesion, reserva_id)
+    if not reserva or reserva.estado != "pendiente_pago":
+        return reserva
+    reserva = await reserva_repository.confirmar_pago(sesion, reserva_id)
+    await kafka_outbox.registrar_evento_reserva(
+        sesion, "RESERVA_CONFIRMADA", reserva, estado_anterior="pendiente_pago"
+    )
+    return reserva
 
-async def cancelar_por_id(sesion: AsyncSession, reserva_id: int) -> Reserva | None:
-    return await reserva_repository.cancelar_por_id(sesion, reserva_id)
+async def cancelar_por_id(
+    sesion: AsyncSession, reserva_id: int, actor_sub: str | None = None
+) -> Reserva | None:
+    """Cancela si estaba activa o pendiente; una reserva ya cerrada no genera evento."""
+    reserva = await reserva_repository.obtener_por_id(sesion, reserva_id)
+    if not reserva or reserva.estado not in ("activa", "pendiente_pago"):
+        return reserva
+    estado_anterior = reserva.estado
+    reserva = await reserva_repository.cancelar_por_id(sesion, reserva_id)
+    await kafka_outbox.registrar_evento_reserva(
+        sesion, "RESERVA_CANCELADA", reserva, actor_sub=actor_sub, estado_anterior=estado_anterior
+    )
+    return reserva
 
 async def cancelar_con_dueno(
     sesion: AsyncSession, reserva_id: int, usuario_sub: str, privilegiado: bool
@@ -178,7 +201,7 @@ async def cancelar_con_dueno(
         raise ReservaNoEncontradaException(reserva_id)
     if not privilegiado and reserva.usuario_sub != usuario_sub:
         raise ReservaNoAutorizadaException(reserva_id)
-    return await reserva_repository.cancelar_por_id(sesion, reserva_id) or reserva
+    return await cancelar_por_id(sesion, reserva_id, actor_sub=usuario_sub) or reserva
 
 async def compensar_por_gasto_fallido(
     sesion: AsyncSession,
@@ -187,10 +210,15 @@ async def compensar_por_gasto_fallido(
     fecha_inicio: datetime.datetime | None = None,
     reserva_id: int | None = None,
 ) -> Reserva | None:
+    # Cancelación por la saga (gasto fallido): sin actor humano.
     if reserva_id:
-        return await reserva_repository.cancelar_por_id(sesion, reserva_id)
+        return await cancelar_por_id(sesion, reserva_id)
     if usuario_sub and espacio_id and fecha_inicio:
-        return await reserva_repository.cancelar_por_evento(
+        reserva = await reserva_repository.cancelar_por_evento(
             sesion, usuario_sub, espacio_id, fecha_inicio
         )
+        # cancelar_por_evento solo devuelve la reserva si la canceló recién.
+        if reserva:
+            await kafka_outbox.registrar_evento_reserva(sesion, "RESERVA_CANCELADA", reserva)
+        return reserva
     return None

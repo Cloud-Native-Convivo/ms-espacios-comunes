@@ -31,6 +31,7 @@ def mock_reserva_repo():
         m.crear = AsyncMock()
         m.cancelar_por_id = AsyncMock()
         m.confirmar_pago = AsyncMock()
+        m.obtener_por_id = AsyncMock()
         yield m
 
 async def test_crear_reserva_exitosa(mock_sesion, mock_espacio_repo, mock_reserva_repo):
@@ -42,7 +43,9 @@ async def test_crear_reserva_exitosa(mock_sesion, mock_espacio_repo, mock_reserv
     )
     usuario_sub = "user-123"
 
-    mock_espacio_repo.obtener_por_id.return_value = Espacio(id=1, estado="activo", tarifa_hora=10000.0)
+    mock_espacio_repo.obtener_por_id.return_value = Espacio(
+        id=1, condominio_id=1, estado="activo", tarifa_hora=10000.0
+    )
     mock_reserva_repo.existe_solapamiento.return_value = False
     mock_reserva_repo.crear.return_value = Reserva(id=42, estado="pendiente_pago", monto_total=20000.0)
 
@@ -138,7 +141,15 @@ async def test_crear_reserva_espacio_inactivo(mock_sesion, mock_espacio_repo):
         await reserva_service.crear(mock_sesion, datos, "user-123")
 
 async def test_compensar_por_gasto_fallido_con_id(mock_sesion, mock_reserva_repo):
-    mock_reserva_repo.cancelar_por_id.return_value = Reserva(id=5, estado="cancelada")
+    mock_sesion.get = AsyncMock(return_value=Espacio(id=1, condominio_id=1))
+    reserva = Reserva(id=5, espacio_id=1, estado="activa")
+    mock_reserva_repo.obtener_por_id.return_value = reserva
+
+    async def _cancelar(sesion, reserva_id):
+        reserva.estado = "cancelada"
+        return reserva
+
+    mock_reserva_repo.cancelar_por_id.side_effect = _cancelar
 
     resultado = await reserva_service.compensar_por_gasto_fallido(mock_sesion, reserva_id=5)
     assert resultado is not None

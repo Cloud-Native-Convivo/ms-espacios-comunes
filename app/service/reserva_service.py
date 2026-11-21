@@ -179,17 +179,34 @@ async def confirmar_pago(sesion: AsyncSession, reserva_id: int) -> Reserva | Non
     return reserva
 
 async def cancelar_por_id(
-    sesion: AsyncSession, reserva_id: int, actor_sub: str | None = None
+    sesion: AsyncSession,
+    reserva_id: int,
+    actor_sub: str | None = None,
+    privilegiado: bool = False,
 ) -> Reserva | None:
-    """Cancela si estaba activa o pendiente; una reserva ya cerrada no genera evento."""
+    """Cancela si estaba activa o pendiente; una reserva ya cerrada no genera evento.
+
+    Si cancela un admin/conserje una reserva ajena, el dueño recibe una alerta.
+    """
     reserva = await reserva_repository.obtener_por_id(sesion, reserva_id)
     if not reserva or reserva.estado not in ("activa", "pendiente_pago"):
         return reserva
     estado_anterior = reserva.estado
     reserva = await reserva_repository.cancelar_por_id(sesion, reserva_id)
-    await kafka_outbox.registrar_evento_reserva(
+    evento = await kafka_outbox.registrar_evento_reserva(
         sesion, "RESERVA_CANCELADA", reserva, actor_sub=actor_sub, estado_anterior=estado_anterior
     )
+    if privilegiado and actor_sub and actor_sub != reserva.usuario_sub:
+        espacio = await sesion.get(Espacio, reserva.espacio_id)
+        kafka_outbox.registrar_alerta(
+            sesion,
+            "RESERVA_CANCELADA_POR_ADMIN",
+            "advertencia",
+            reserva,
+            evento.condominio_id,
+            f"Tu reserva #{reserva.id} en {espacio.nombre} fue cancelada por la administración.",
+            origen_event_id=evento.event_id,
+        )
     return reserva
 
 async def cancelar_con_dueno(
@@ -201,7 +218,9 @@ async def cancelar_con_dueno(
         raise ReservaNoEncontradaException(reserva_id)
     if not privilegiado and reserva.usuario_sub != usuario_sub:
         raise ReservaNoAutorizadaException(reserva_id)
-    return await cancelar_por_id(sesion, reserva_id, actor_sub=usuario_sub) or reserva
+    return await cancelar_por_id(
+        sesion, reserva_id, actor_sub=usuario_sub, privilegiado=privilegiado
+    ) or reserva
 
 async def compensar_por_gasto_fallido(
     sesion: AsyncSession,

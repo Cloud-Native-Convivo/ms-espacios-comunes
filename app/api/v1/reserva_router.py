@@ -56,7 +56,7 @@ async def cancelar_reserva(
         raise HTTPException(status_code=403, detail="No autorizado para cancelar esta reserva")
 
     reserva_cancelada = await reserva_service.cancelar_por_id(
-        sesion, reserva_id, actor_sub=usuario_sub
+        sesion, reserva_id, actor_sub=usuario_sub, privilegiado=es_admin_o_conserje
     )
     return reserva_cancelada or reserva
 

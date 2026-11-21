@@ -125,6 +125,37 @@ async def obtener_expiradas(sesion: AsyncSession, fecha_corte: datetime.datetime
     resultado = await sesion.execute(consulta)
     return list(resultado.scalars().all())
 
+async def obtener_futuras_vigentes(
+    sesion: AsyncSession, espacio_id: int, ahora: datetime.datetime
+) -> list[Reserva]:
+    """Reservas del espacio que aún no terminan y siguen en pie (activas o pendientes sin expirar)."""
+    consulta = select(Reserva).where(
+        and_(
+            Reserva.espacio_id == espacio_id,
+            Reserva.fecha_fin > ahora,
+            or_(
+                Reserva.estado == "activa",
+                and_(Reserva.estado == "pendiente_pago", Reserva.expira_en > ahora),
+            ),
+        )
+    )
+    resultado = await sesion.execute(consulta)
+    return list(resultado.scalars().all())
+
+async def obtener_por_expirar(
+    sesion: AsyncSession, ahora: datetime.datetime, limite: datetime.datetime
+) -> list[Reserva]:
+    """Pendientes de pago que expiran en (ahora, limite]."""
+    consulta = select(Reserva).where(
+        and_(
+            Reserva.estado == "pendiente_pago",
+            Reserva.expira_en > ahora,
+            Reserva.expira_en <= limite,
+        )
+    )
+    resultado = await sesion.execute(consulta)
+    return list(resultado.scalars().all())
+
 async def marcar_expirada(sesion: AsyncSession, reserva: Reserva) -> None:
     reserva.estado = "expirada"
     await sesion.flush()

@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.exception.espacio_exception import EspacioException
+from app.exception.kafka_admin_exception import KafkaAdminException
 from app.exception.reserva_exception import (
     ReservaException,
     ReservaFechaInvalidaException,
@@ -37,6 +38,10 @@ def registrar_manejadores_excepciones(app: FastAPI):
             status_code=404,
             content={"detail": str(exc)},
         )
+
+    @app.exception_handler(KafkaAdminException)
+    async def manejar_kafka_admin_exception(request: Request, exc: KafkaAdminException):
+        return JSONResponse(status_code=exc.estado, content={"detail": str(exc)})
 
     @app.exception_handler(Exception)
     async def manejar_error_no_controlado(request: Request, exc: Exception):

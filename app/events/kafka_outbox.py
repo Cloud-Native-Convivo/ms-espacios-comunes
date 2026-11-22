@@ -9,6 +9,8 @@ deduplican por event_id).
 import asyncio
 import datetime
 import logging
+from typing import Literal
+from uuid import UUID
 
 from aiokafka import AIOKafkaProducer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +23,7 @@ from app.dto.kafka_eventos import (
     AlertaEspacioV1,
     DatosEventoEspacio,
     EventoEspacioV1,
+    TipoAlertaEspacio,
     TipoEventoEspacio,
 )
 from app.events.kafka_productor import crear_productor_kafka
@@ -48,16 +51,42 @@ def _a_utc(valor: datetime.datetime | None) -> datetime.datetime | None:
     return valor.astimezone(datetime.UTC)
 
 
-def _agregar(sesion: AsyncSession, evento: EventoEspacioV1) -> EventoEspacioV1:
+def _agregar(sesion: AsyncSession, evento: EventoEspacioV1 | AlertaEspacioV1) -> None:
+    topico = TOPICO_ALERTAS if isinstance(evento, AlertaEspacioV1) else TOPICO_HISTORIAL
     sesion.add(
         EventoOutboxKafka(
             event_id=str(evento.event_id),
-            topico=TOPICO_HISTORIAL,
+            topico=topico,
             clave=evento.clave,
             carga_util=evento.model_dump_json(),
         )
     )
-    return evento
+
+
+def registrar_alerta(
+    sesion: AsyncSession,
+    tipo: TipoAlertaEspacio,
+    severidad: Literal["info", "advertencia"],
+    reserva: Reserva,
+    condominio_id: int,
+    mensaje: str,
+    origen_event_id: UUID | None = None,
+    event_id: UUID | None = None,
+) -> AlertaEspacioV1:
+    """Agrega a la sesión una alerta dirigida al dueño de la reserva (espacios.alertas.v1)."""
+    alerta = AlertaEspacioV1(
+        **({"event_id": event_id} if event_id else {}),
+        tipo=tipo,
+        severidad=severidad,
+        condominio_id=condominio_id,
+        espacio_id=reserva.espacio_id,
+        reserva_id=reserva.id,
+        destinatario_sub=reserva.usuario_sub,
+        mensaje=mensaje,
+        origen_event_id=origen_event_id,
+    )
+    _agregar(sesion, alerta)
+    return alerta
 
 
 def registrar_evento_espacio(
@@ -69,16 +98,15 @@ def registrar_evento_espacio(
     estado_nuevo: str | None = None,
 ) -> EventoEspacioV1:
     """Agrega a la sesión un evento del historial de un espacio."""
-    return _agregar(
-        sesion,
-        EventoEspacioV1(
-            tipo=tipo,
-            condominio_id=espacio.condominio_id,
-            espacio_id=espacio.id,
-            actor_sub=actor_sub,
-            datos=DatosEventoEspacio(estado_anterior=estado_anterior, estado_nuevo=estado_nuevo),
-        ),
+    evento = EventoEspacioV1(
+        tipo=tipo,
+        condominio_id=espacio.condominio_id,
+        espacio_id=espacio.id,
+        actor_sub=actor_sub,
+        datos=DatosEventoEspacio(estado_anterior=estado_anterior, estado_nuevo=estado_nuevo),
     )
+    _agregar(sesion, evento)
+    return evento
 
 
 async def registrar_evento_reserva(
@@ -92,23 +120,22 @@ async def registrar_evento_reserva(
     """Agrega a la sesión un evento de reserva; la reserva debe tener id (post flush)."""
     if espacio is None:
         espacio = await sesion.get(Espacio, reserva.espacio_id)
-    return _agregar(
-        sesion,
-        EventoEspacioV1(
-            tipo=tipo,
-            condominio_id=espacio.condominio_id,
-            espacio_id=reserva.espacio_id,
-            reserva_id=reserva.id,
-            actor_sub=actor_sub,
-            datos=DatosEventoEspacio(
-                estado_anterior=estado_anterior,
-                estado_nuevo=reserva.estado,
-                fecha_inicio=_a_utc(reserva.fecha_inicio),
-                fecha_fin=_a_utc(reserva.fecha_fin),
-                monto=float(reserva.monto_total) if reserva.monto_total is not None else None,
-            ),
+    evento = EventoEspacioV1(
+        tipo=tipo,
+        condominio_id=espacio.condominio_id,
+        espacio_id=reserva.espacio_id,
+        reserva_id=reserva.id,
+        actor_sub=actor_sub,
+        datos=DatosEventoEspacio(
+            estado_anterior=estado_anterior,
+            estado_nuevo=reserva.estado,
+            fecha_inicio=_a_utc(reserva.fecha_inicio),
+            fecha_fin=_a_utc(reserva.fecha_fin),
+            monto=float(reserva.monto_total) if reserva.monto_total is not None else None,
         ),
     )
+    _agregar(sesion, evento)
+    return evento
 
 
 async def publicar_pendientes(

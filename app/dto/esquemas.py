@@ -83,3 +83,16 @@ class ReservaResponse(BaseModel):
     def normalizar_monto(cls, v):
         return 0.0 if v is None else float(v)
 
+
+class EstadisticaEspacioResponse(BaseModel):
+    """Disponibilidad y uso de un espacio en la ventana consultada (sin datos personales)."""
+
+    espacio_id: int
+    estado: str
+    disponible: bool
+    reservas_creadas: int = 0
+    reservas_confirmadas: int = 0
+    reservas_canceladas: int = 0
+    reservas_expiradas: int = 0
+    horas_confirmadas: float = 0.0
+

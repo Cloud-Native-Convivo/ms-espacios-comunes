@@ -37,6 +37,7 @@ async def test_worker_marca_expiradas_y_propaga_cancelacion_en_espera():
     ):
         repo.obtener_expiradas = AsyncMock(return_value=[reserva])
         repo.marcar_expirada = AsyncMock()
+        repo.obtener_por_expirar = AsyncMock(return_value=[])
         with pytest.raises(asyncio.CancelledError):
             await worker_expiracion(intervalo_segundos=0)
 
@@ -84,6 +85,7 @@ async def test_worker_agrega_evento_outbox_reserva_expirada_en_la_misma_sesion()
     ):
         repo.obtener_expiradas = AsyncMock(return_value=[reserva])
         repo.marcar_expirada = AsyncMock()
+        repo.obtener_por_expirar = AsyncMock(return_value=[])
         with pytest.raises(asyncio.CancelledError):
             await worker_expiracion(intervalo_segundos=0)
 

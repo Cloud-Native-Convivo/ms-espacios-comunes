@@ -12,6 +12,7 @@ from app.config.settings import settings
 from app.events.comandos_consumer import consumidor_comandos
 from app.events.compensacion_consumer import consumidor_compensacion
 from app.events.expiracion_worker import worker_expiracion
+from app.events.kafka_estadisticas import consumidor_estadisticas
 from app.events.kafka_outbox import relay_outbox_kafka
 from app.events.outbox_event import relay_outbox
 from app.events.worker_notificaciones import consumidor_notificaciones
@@ -55,6 +56,7 @@ async def lifespan(aplicacion: FastAPI):
     tarea_notificaciones = asyncio.create_task(consumidor_notificaciones())
     tarea_pdf = asyncio.create_task(consumidor_pdf())
     tarea_outbox_kafka = asyncio.create_task(relay_outbox_kafka())
+    tarea_estadisticas = asyncio.create_task(consumidor_estadisticas())
     logger.info("Tareas de eventos e expiración iniciadas")
 
     try:
@@ -68,9 +70,11 @@ async def lifespan(aplicacion: FastAPI):
         tarea_notificaciones.cancel()
         tarea_pdf.cancel()
         tarea_outbox_kafka.cancel()
+        tarea_estadisticas.cancel()
         await asyncio.gather(
             tarea_outbox,
             tarea_outbox_kafka,
+            tarea_estadisticas,
             tarea_compensacion,
             tarea_expiracion,
             tarea_comandos,

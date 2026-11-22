@@ -18,3 +18,10 @@ async def obtener_pendientes(sesion: AsyncSession) -> list[EventoOutboxKafka]:
     )
     resultado = await sesion.execute(consulta)
     return list(resultado.scalars().all())
+
+
+async def existe_evento(sesion: AsyncSession, event_id: str) -> bool:
+    """True si el event_id ya está en el outbox (publicado o no)."""
+    consulta = select(EventoOutboxKafka.id).where(EventoOutboxKafka.event_id == event_id)
+    resultado = await sesion.execute(consulta)
+    return resultado.first() is not None

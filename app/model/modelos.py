@@ -1,6 +1,7 @@
 import datetime
 
 from sqlalchemy import (
+    Date,
     DateTime,
     ForeignKey,
     Identity,
@@ -80,6 +81,35 @@ class EventoOutbox(Base):
     creado_en: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
+
+
+class EstadisticaEspacio(Base):
+    """Disponibilidad actual de un espacio, proyectada desde espacios.historial.v1."""
+
+    __tablename__ = "estadisticas_espacio"
+    __table_args__ = (Index("ix_estadisticas_espacio_condominio", "condominio_id"),)
+
+    espacio_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    condominio_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    # activo | mantenimiento | inactivo | eliminado
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
+    actualizado_en: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+
+
+class EstadisticaEspacioDia(Base):
+    """Contadores diarios (UTC) por espacio: permiten cualquier ventana de hasta 90 días."""
+
+    __tablename__ = "estadisticas_espacio_dia"
+    __table_args__ = (Index("ix_estadisticas_dia_condominio_fecha", "condominio_id", "fecha"),)
+
+    espacio_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    fecha: Mapped[datetime.date] = mapped_column(Date, primary_key=True)
+    condominio_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    reservas_creadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reservas_confirmadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reservas_canceladas: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reservas_expiradas: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    horas_confirmadas: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
 
 
 class EventoOutboxKafka(Base):

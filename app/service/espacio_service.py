@@ -4,7 +4,8 @@ from app.dto.esquemas import ActualizarEspacioRequest, CrearEspacioRequest
 from app.events import kafka_outbox
 from app.exception.espacio_exception import EspacioNoEncontradoException
 from app.model.modelos import Espacio
-from app.repository import espacio_repository
+from app.repository import espacio_repository, reserva_repository
+from app.util.tiempo import ahora_utc
 
 _CAMPOS_EDITABLES = ("nombre", "capacidad", "tarifa_hora", "descripcion", "ubicacion")
 
@@ -62,7 +63,7 @@ async def actualizar(
     if campos_cambiados:
         kafka_outbox.registrar_evento_espacio(sesion, "ESPACIO_ACTUALIZADO", espacio, actor_sub)
     if estado_cambiado:
-        kafka_outbox.registrar_evento_espacio(
+        evento = kafka_outbox.registrar_evento_espacio(
             sesion,
             kafka_outbox.TIPO_POR_ESTADO_ESPACIO[datos.estado],
             espacio,
@@ -70,7 +71,23 @@ async def actualizar(
             estado_anterior=estado_anterior,
             estado_nuevo=datos.estado,
         )
+        if datos.estado == "mantenimiento":
+            await _alertar_reservas_afectadas(sesion, espacio, evento.event_id)
     return await espacio_repository.actualizar(sesion, espacio)
+
+async def _alertar_reservas_afectadas(sesion: AsyncSession, espacio: Espacio, origen_event_id) -> None:
+    """Una alerta por cada reserva vigente del espacio que entra en mantención."""
+    for reserva in await reserva_repository.obtener_futuras_vigentes(sesion, espacio.id, ahora_utc()):
+        kafka_outbox.registrar_alerta(
+            sesion,
+            "ESPACIO_EN_MANTENCION_CON_RESERVAS",
+            "advertencia",
+            reserva,
+            espacio.condominio_id,
+            f"El espacio {espacio.nombre} entró en mantención. Tu reserva #{reserva.id} "
+            "podría verse afectada; revisa con la administración.",
+            origen_event_id=origen_event_id,
+        )
 
 async def eliminar(
     sesion: AsyncSession, espacio_id: int, condominio_id: int, actor_sub: str | None = None

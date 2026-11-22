@@ -4,7 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config.settings import settings
 
-motor = create_async_engine(settings.url_base_datos, echo=settings.modo_debug)
+# pool_pre_ping: tras un reinicio de Oracle descarta la conexión muerta del pool
+# en vez de colgar la primera petición.
+motor = create_async_engine(
+    settings.url_base_datos, echo=settings.modo_debug, pool_pre_ping=True
+)
 
 fabrica_sesiones = async_sessionmaker(motor, class_=AsyncSession, expire_on_commit=False)
 
